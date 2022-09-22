@@ -1,4 +1,4 @@
-//Package zap provides a BaseLogger implementation for uber/zap
+// Package zap provides a BaseLogger implementation for uber/zap
 package zap
 
 import (
@@ -15,7 +15,7 @@ type logger struct {
 	cfg    zap.Config
 }
 
-//COLBREW_CALL_STACK_SIZE number stack frame involved between the logger call from application to zap call.
+// COLBREW_CALL_STACK_SIZE number stack frame involved between the logger call from application to zap call.
 const COLBREW_CALL_STACK_SIZE = 3
 
 func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...interface{}) {
@@ -32,9 +32,7 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
-		for k, v := range ctxFields {
-			logger = logger.With(k, v)
-		}
+		ctxFields.Range(func(k, v interface{}) bool { logger = logger.With(k, v); return true })
 	}
 
 	logFunc := l.logger.Error

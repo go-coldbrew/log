@@ -1,4 +1,4 @@
-//Package stdlog provides a BaseLogger implementation for golang "log" package
+// Package stdlog provides a BaseLogger implementation for golang "log" package
 package stdlog
 
 import (
@@ -25,15 +25,16 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		// fetch fields from context and add them to logrus fields
 		ctxFields := loggers.FromContext(ctx)
 		if ctxFields != nil {
-			for k, v := range ctxFields {
+			ctxFields.Range(func(k, v interface{}) bool {
 				args = append(args, k, v)
-			}
+				return true
+			})
 		}
 		log.Println(args...)
 	}
 }
 
-//NewLogger returns a BaseLogger impl for golang "log" package
+// NewLogger returns a BaseLogger impl for golang "log" package
 func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 	return &logger{
 		level: loggers.InfoLevel,
