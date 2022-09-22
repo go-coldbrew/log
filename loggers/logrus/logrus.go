@@ -37,9 +37,12 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 	// fetch fields from context and add them to logrus fields
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
-		for k, v := range ctxFields {
-			fields[k] = v
-		}
+		ctxFields.Range(func(k, v interface{}) bool {
+			if str, ok := k.(string); ok {
+				fields[str] = v
+			}
+			return true
+		})
 	}
 
 	if l.opt.CallerInfo {
@@ -81,7 +84,7 @@ func (l *logger) GetLevel() loggers.Level {
 	}
 }
 
-//NewLogger returns a BaseLogger impl for logrus
+// NewLogger returns a BaseLogger impl for logrus
 func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 	// default options
 	opt := loggers.GetDefaultOptions()

@@ -1,4 +1,4 @@
-//Package gokit provides BaseLogger implementation for go-kit/log
+// Package gokit provides BaseLogger implementation for go-kit/log
 package gokit
 
 import (
@@ -28,11 +28,13 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 	// fetch fields from context and add them to logrus fields
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
-		for k, v := range ctxFields {
-			lgr = log.With(lgr, k, v)
-		}
-	}
 
+		ctxFields.Range(func(k, v interface{}) bool {
+
+			lgr = log.With(lgr, k, v)
+			return true
+		})
+	}
 	if len(args) == 1 {
 		lgr.Log("msg", args[0])
 	} else {
@@ -48,7 +50,7 @@ func (l *logger) GetLevel() loggers.Level {
 	return l.level
 }
 
-//NewLogger returns a base logger impl for go-kit log
+// NewLogger returns a base logger impl for go-kit log
 func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 	// default options
 	opt := loggers.GetDefaultOptions()
