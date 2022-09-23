@@ -17,14 +17,14 @@ type LogFields struct {
 }
 
 // Add or modify log fields
-func (o LogFields) Add(key string, value interface{}) {
+func (o *LogFields) Add(key string, value interface{}) {
 	if len(key) > 0 {
 		o.Store(key, value)
 	}
 }
 
 // Del deletes a log field entry
-func (o LogFields) Del(key string) {
+func (o *LogFields) Del(key string) {
 	o.Delete(key)
 }
 
@@ -36,8 +36,7 @@ func AddToLogContext(ctx context.Context, key string, value interface{}) context
 		ctx = context.WithValue(ctx, contextKey, new(LogFields))
 		data = FromContext(ctx)
 	}
-	m := ctx.Value(contextKey)
-	if data, ok := m.(LogFields); ok {
+	if data != nil {
 		data.Add(key, value)
 	}
 	return ctx
