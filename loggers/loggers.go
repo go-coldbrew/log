@@ -45,7 +45,7 @@ func ParseLevel(lvl string) (Level, error) {
 	return l, fmt.Errorf("not a valid log Level: %q", lvl)
 }
 
-//AllLevels A constant exposing all logging levels
+// AllLevels A constant exposing all logging levels
 var AllLevels = []Level{
 	ErrorLevel,
 	WarnLevel,
@@ -68,31 +68,49 @@ const (
 	DebugLevel
 )
 
-//BaseLogger is the interface that needs to be implemented by client loggers
+// BaseLogger is the interface that needs to be implemented by client loggers
 type BaseLogger interface {
+	// Log logs a message at the given level. The args are key-value pairs.
+	// The key must be a string, while the value can be of any type.
+	// The message is logged with the given level.
+	// Level is the level of the log message.
+	// Skip is the number of stack frames to skip before getting the file name and line number.
+	// If skip is 0, the file and line of the caller of Log is logged.
+	// ctx is the context of the log message. It is used to pass the context fields to the logger
 	Log(ctx context.Context, level Level, skip int, args ...interface{})
+	// SetLevel sets the level of the logger
 	SetLevel(level Level)
+	// GetLevel gets the level of the logger
 	GetLevel() Level
 }
 
-//Options contain all common options for BaseLoggers
+// Options contain all common options for BaseLoggers
 type Options struct {
-	ReplaceStdLogger   bool
-	JSONLogs           bool
-	Level              Level
+	// ReplaceStdLogger replaces std logger with this logger
+	ReplaceStdLogger bool
+	// JSONLogs enables/disables json logs
+	JSONLogs bool
+	// Level is the level of the logger
+	Level Level
+	// TimestampFieldName is the name of the timestamp field in logs
 	TimestampFieldName string
-	LevelFieldName     string
-	CallerInfo         bool
-	CallerFileDepth    int
-	CallerFieldName    string
+	// LevelFieldName is the name of the level field in logs
+	LevelFieldName string
+	// CallerInfo enables/disables adding caller info to logs
+	CallerInfo bool
+	// CallerFileDepth is the depth of file to use in caller info
+	CallerFileDepth int
+	// CallerFieldName is the name of callerinfo field
+	CallerFieldName string
 }
 
-//GetDefaultOptions fetches loggers default options
+// GetDefaultOptions fetches loggers default options
 func GetDefaultOptions() Options {
 	return DefaultOptions
 }
 
 // DefaultOptions stores all default options in loggers package
+// These options are used by all loggers
 var (
 	DefaultOptions = Options{
 		ReplaceStdLogger:   false,
@@ -106,24 +124,24 @@ var (
 	}
 )
 
-//Option defines an option for BaseLogger
+// Option defines an option for BaseLogger
 type Option func(*Options)
 
-//WithReplaceStdLogger enables/disables replacing std logger
+// WithReplaceStdLogger enables/disables replacing std logger
 func WithReplaceStdLogger(replaceStdLogger bool) Option {
 	return func(o *Options) {
 		o.ReplaceStdLogger = replaceStdLogger
 	}
 }
 
-//WithJSONLogs enables/disables json logs
+// WithJSONLogs enables/disables json logs
 func WithJSONLogs(json bool) Option {
 	return func(o *Options) {
 		o.JSONLogs = json
 	}
 }
 
-//WithTimestampFieldName sets the name of the time stamp field in logs
+// WithTimestampFieldName sets the name of the time stamp field in logs
 func WithTimestampFieldName(name string) Option {
 	return func(o *Options) {
 		if name != "" {
@@ -132,7 +150,7 @@ func WithTimestampFieldName(name string) Option {
 	}
 }
 
-//WithLevelFieldName sets the name of the level field in logs
+// WithLevelFieldName sets the name of the level field in logs
 func WithLevelFieldName(name string) Option {
 	return func(o *Options) {
 		if name != "" {
@@ -141,14 +159,14 @@ func WithLevelFieldName(name string) Option {
 	}
 }
 
-//WithCallerInfo enables/disables adding caller info to logs
+// WithCallerInfo enables/disables adding caller info to logs
 func WithCallerInfo(callerInfo bool) Option {
 	return func(o *Options) {
 		o.CallerInfo = callerInfo
 	}
 }
 
-//WithCallerFileDepth sets the depth of file to use in caller info
+// WithCallerFileDepth sets the depth of file to use in caller info
 func WithCallerFileDepth(depth int) Option {
 	return func(o *Options) {
 		if depth > 0 {
@@ -157,7 +175,7 @@ func WithCallerFileDepth(depth int) Option {
 	}
 }
 
-//WithCallerFieldName sets the name of callerinfo field
+// WithCallerFieldName sets the name of callerinfo field
 func WithCallerFieldName(name string) Option {
 	return func(o *Options) {
 		name = strings.TrimSpace(name)
@@ -167,7 +185,9 @@ func WithCallerFieldName(name string) Option {
 	}
 }
 
-//FetchCallerInfo fetches function name, file name and line number from stack
+// FetchCallerInfo fetches function name, file name and line number from stack
+// skip is the number of stack frames to ascend, with 0 identifying the caller of FetchCallerInfo.
+// depth is the depth of file to use in caller info
 func FetchCallerInfo(skip int, depth int) (function string, file string, line int) {
 	if depth <= 0 {
 		depth = 2

@@ -21,7 +21,7 @@ Package wrap provides multiple wrap functions to wrap log implementation of othe
 func ToGoKitLogger(l log.Logger) basegokit.Logger
 ```
 
-ToGoKitLogger wraps a log\.Logger to gokit/log\.Logger
+ToGoKitLogger wraps a log.Logger to gokit/log.Logger
 
 
 

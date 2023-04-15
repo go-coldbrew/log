@@ -46,19 +46,25 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if l.GetLevel() >= level {
+	logLevel := l.GetLevel()
+	if overridenLogLevel, found := GetOverridenLogLevel(ctx); found {
+		logLevel = overridenLogLevel
+	}
+	if logLevel >= level {
 		l.baseLog.Log(ctx, level, skip+1, args...)
 	}
 }
 
-//NewLogger creates a new logger with a provided BaseLogger
+// NewLogger creates a new logger with a provided BaseLogger
+// The default logger is gokit logger
 func NewLogger(log loggers.BaseLogger) Logger {
 	l := new(logger)
 	l.baseLog = log
 	return l
 }
 
-//GetLogger returns the global logger
+// GetLogger returns the global logger
+// If the global logger is not set, it will create a new one with gokit logger
 func GetLogger() Logger {
 	if defaultLogger == nil {
 		once.Do(func() {
@@ -68,7 +74,7 @@ func GetLogger() Logger {
 	return defaultLogger
 }
 
-//SetLogger sets the global logger
+// SetLogger sets the global logger
 func SetLogger(l Logger) {
 	if l != nil {
 		mu.Lock()
