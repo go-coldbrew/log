@@ -21,9 +21,9 @@ Package loggers provides loggers implementation for log package
   - [func ParseLevel(lvl string) (Level, error)](<#func-parselevel>)
   - [func (level Level) String() string](<#func-level-string>)
 - [type LogFields](<#type-logfields>)
-  - [func FromContext(ctx context.Context) LogFields](<#func-fromcontext>)
-  - [func (o LogFields) Add(key string, value interface{})](<#func-logfields-add>)
-  - [func (o LogFields) Del(key string)](<#func-logfields-del>)
+  - [func FromContext(ctx context.Context) *LogFields](<#func-fromcontext>)
+  - [func (o *LogFields) Add(key string, value interface{})](<#func-logfields-add>)
+  - [func (o *LogFields) Del(key string)](<#func-logfields-del>)
 - [type Option](<#type-option>)
   - [func WithCallerFieldName(name string) Option](<#func-withcallerfieldname>)
   - [func WithCallerFileDepth(depth int) Option](<#func-withcallerfiledepth>)
@@ -38,7 +38,7 @@ Package loggers provides loggers implementation for log package
 
 ## Constants
 
-These are the different logging levels\. You can set the logging level to log on your instance of logger\, obtained with \`logs\.New\(\)\`\.
+These are the different logging levels. You can set the logging level to log on your instance of logger, obtained with \`logs.New\(\)\`.
 
 ```go
 const (
@@ -68,7 +68,7 @@ var AllLevels = []Level{
 }
 ```
 
-DefaultOptions stores all default options in loggers package
+DefaultOptions stores all default options in loggers package These options are used by all loggers
 
 ```go
 var (
@@ -91,7 +91,7 @@ var (
 func AddToLogContext(ctx context.Context, key string, value interface{}) context.Context
 ```
 
-AddToLogContext adds log fields to context\. Any info added here will be added to all logs using this context
+AddToLogContext adds log fields to context. Any info added here will be added to all logs using this context
 
 ## func FetchCallerInfo
 
@@ -99,7 +99,7 @@ AddToLogContext adds log fields to context\. Any info added here will be added t
 func FetchCallerInfo(skip int, depth int) (function string, file string, line int)
 ```
 
-FetchCallerInfo fetches function name\, file name and line number from stack
+FetchCallerInfo fetches function name, file name and line number from stack skip is the number of stack frames to ascend, with 0 identifying the caller of FetchCallerInfo. depth is the depth of file to use in caller info
 
 ## type BaseLogger
 
@@ -107,8 +107,17 @@ BaseLogger is the interface that needs to be implemented by client loggers
 
 ```go
 type BaseLogger interface {
+    // Log logs a message at the given level. The args are key-value pairs.
+    // The key must be a string, while the value can be of any type.
+    // The message is logged with the given level.
+    // Level is the level of the log message.
+    // Skip is the number of stack frames to skip before getting the file name and line number.
+    // If skip is 0, the file and line of the caller of Log is logged.
+    // ctx is the context of the log message. It is used to pass the context fields to the logger
     Log(ctx context.Context, level Level, skip int, args ...interface{})
+    // SetLevel sets the level of the logger
     SetLevel(level Level)
+    // GetLevel gets the level of the logger
     GetLevel() Level
 }
 ```
@@ -127,7 +136,7 @@ type Level uint32
 func ParseLevel(lvl string) (Level, error)
 ```
 
-ParseLevel takes a string level and returns the log level constant\.
+ParseLevel takes a string level and returns the log level constant.
 
 ### func \(Level\) String
 
@@ -135,36 +144,38 @@ ParseLevel takes a string level and returns the log level constant\.
 func (level Level) String() string
 ```
 
-Convert the Level to a string\. E\.g\.  ErrorLevel becomes "error"\.
+Convert the Level to a string. E.g.  ErrorLevel becomes "error".
 
 ## type LogFields
 
 LogFields contains all fields that have to be added to logs
 
 ```go
-type LogFields map[string]interface{}
+type LogFields struct {
+    sync.Map
+}
 ```
 
 ### func FromContext
 
 ```go
-func FromContext(ctx context.Context) LogFields
+func FromContext(ctx context.Context) *LogFields
 ```
 
 FromContext fetchs log fields from provided context
 
-### func \(LogFields\) Add
+### func \(\*LogFields\) Add
 
 ```go
-func (o LogFields) Add(key string, value interface{})
+func (o *LogFields) Add(key string, value interface{})
 ```
 
 Add or modify log fields
 
-### func \(LogFields\) Del
+### func \(\*LogFields\) Del
 
 ```go
-func (o LogFields) Del(key string)
+func (o *LogFields) Del(key string)
 ```
 
 Del deletes a log field entry
@@ -239,14 +250,22 @@ Options contain all common options for BaseLoggers
 
 ```go
 type Options struct {
-    ReplaceStdLogger   bool
-    JSONLogs           bool
-    Level              Level
+    // ReplaceStdLogger replaces std logger with this logger
+    ReplaceStdLogger bool
+    // JSONLogs enables/disables json logs
+    JSONLogs bool
+    // Level is the level of the logger
+    Level Level
+    // TimestampFieldName is the name of the timestamp field in logs
     TimestampFieldName string
-    LevelFieldName     string
-    CallerInfo         bool
-    CallerFileDepth    int
-    CallerFieldName    string
+    // LevelFieldName is the name of the level field in logs
+    LevelFieldName string
+    // CallerInfo enables/disables adding caller info to logs
+    CallerInfo bool
+    // CallerFileDepth is the depth of file to use in caller info
+    CallerFileDepth int
+    // CallerFieldName is the name of callerinfo field
+    CallerFieldName string
 }
 ```
 

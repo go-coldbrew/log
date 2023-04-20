@@ -8,7 +8,7 @@
 import "github.com/go-coldbrew/log"
 ```
 
-Package log provides a minimal interface for structured logging in services\. ColdBrew uses this log package for all logs\.
+Package log provides a minimal interface for structured logging in services. ColdBrew uses this log package for all logs.
 
 ### How To Use
 
@@ -21,24 +21,24 @@ log.Info(...)
 log.Debug(...)
 ```
 
-You can also initialize a new logger by calling 'log\.NewLogger' and passing a loggers\.BaseLogger implementation \(loggers package provides a number of pre built implementations\)
+You can also initialize a new logger by calling 'log.NewLogger' and passing a loggers.BaseLogger implementation \(loggers package provides a number of pre built implementations\)
 
 ```
 logger := log.NewLogger(gokit.NewLogger())
 logger.Info(ctx, "key", "value")
 ```
 
-Note: Preferred logging output is in either logfmt or json format\, so to facilitate these log function arguments should be in pairs of key\-value
+Note: Preferred logging output is in either logfmt or json format, so to facilitate these log function arguments should be in pairs of key\-value
 
 ### Contextual Logs
 
-log package uses context\.Context to pass additional information to logs\, you can use 'loggers\.AddToLogContext' function to add additional information to logs\. For example in access log from service
+log package uses context.Context to pass additional information to logs, you can use 'loggers.AddToLogContext' function to add additional information to logs. For example in access log from service
 
 ```
 {"@timestamp":"2018-07-30T09:58:18.262948679Z","caller":"http/http.go:66","error":null,"grpcMethod":"/AuthSvc.AuthService/Authenticate","level":"info","method":"POST","path":"/2.0/authenticate/","took":"1.356812ms","trace":"15592e1b-93df-11e8-bdfd-0242ac110002","transport":"http"}
 ```
 
-we pass 'grpcMethod' from context\, this information gets automatically added to all log calls called inside the service and makes debugging services much easier\. ColdBrew also generates a 'trace' ID per request\, this can be used to trace an entire request path in logs\.
+we pass 'grpcMethod' from context, this information gets automatically added to all log calls called inside the service and makes debugging services much easier. ColdBrew also generates a 'trace' ID per request, this can be used to trace an entire request path in logs.
 
 this package is based on https://github.com/carousell/Orion/tree/master/utils/log
 
@@ -47,7 +47,9 @@ this package is based on https://github.com/carousell/Orion/tree/master/utils/lo
 - [func Debug(ctx context.Context, args ...interface{})](<#func-debug>)
 - [func Error(ctx context.Context, args ...interface{})](<#func-error>)
 - [func GetLevel() loggers.Level](<#func-getlevel>)
+- [func GetOverridenLogLevel(ctx context.Context) (loggers.Level, bool)](<#func-getoverridenloglevel>)
 - [func Info(ctx context.Context, args ...interface{})](<#func-info>)
+- [func OverrideLogLevel(ctx context.Context, level loggers.Level) context.Context](<#func-overrideloglevel>)
 - [func SetLevel(level loggers.Level)](<#func-setlevel>)
 - [func SetLogger(l Logger)](<#func-setlogger>)
 - [func Warn(ctx context.Context, args ...interface{})](<#func-warn>)
@@ -62,7 +64,7 @@ this package is based on https://github.com/carousell/Orion/tree/master/utils/lo
 func Debug(ctx context.Context, args ...interface{})
 ```
 
-Debug writes out a debug log to global logger
+Debug writes out a debug log to global logger This is a convenience function for GetLogger\(\).Log\(loggers.DebugLevel, 1, args...\)
 
 ## func Error
 
@@ -70,7 +72,7 @@ Debug writes out a debug log to global logger
 func Error(ctx context.Context, args ...interface{})
 ```
 
-Error writes out an error log to global logger
+Error writes out an error log to global logger This is a convenience function for GetLogger\(\).Log\(loggers.ErrorLevel, 1, args...\)
 
 ## func GetLevel
 
@@ -78,7 +80,15 @@ Error writes out an error log to global logger
 func GetLevel() loggers.Level
 ```
 
-GetLevel returns the current log level
+GetLevel returns the current log level This is useful for checking if a log level is enabled
+
+## func GetOverridenLogLevel
+
+```go
+func GetOverridenLogLevel(ctx context.Context) (loggers.Level, bool)
+```
+
+GetOverridenLogLevel fetches overriden log level from context If no log level is overriden, it returns false If log level is overriden, it returns the log level and true
 
 ## func Info
 
@@ -86,7 +96,15 @@ GetLevel returns the current log level
 func Info(ctx context.Context, args ...interface{})
 ```
 
-Info writes out an info log to global logger
+Info writes out an info log to global logger This is a convenience function for GetLogger\(\).Log\(loggers.InfoLevel, 1, args...\)
+
+## func OverrideLogLevel
+
+```go
+func OverrideLogLevel(ctx context.Context, level loggers.Level) context.Context
+```
+
+OverrideLogLevel allows the default log level to be overridden from request context This is useful when you want to override the log level for a specific request For example, you can set the log level to debug for a specific request while the default log level is set to info
 
 ## func SetLevel
 
@@ -110,18 +128,26 @@ SetLogger sets the global logger
 func Warn(ctx context.Context, args ...interface{})
 ```
 
-Warn writes out a warning log to global logger
+Warn writes out a warning log to global logger This is a convenience function for GetLogger\(\).Log\(loggers.WarnLevel, 1, args...\)
 
 ## type Logger
 
-Logger interface is implemnted by the log implementation
+Logger interface is implemnted by the log implementation to provide the log methods to the application code.
 
 ```go
 type Logger interface {
     loggers.BaseLogger
+    // Debug logs a message at level Debug.
+    // ctx is used to extract the request id and other context information.
     Debug(ctx context.Context, args ...interface{})
+    // Info logs a message at level Info.
+    // ctx is used to extract the request id and other context information.
     Info(ctx context.Context, args ...interface{})
+    // Warn logs a message at level Warn.
+    // ctx is used to extract the request id and other context information.
     Warn(ctx context.Context, args ...interface{})
+    // Error logs a message at level Error.
+    // ctx is used to extract the request id and other context information.
     Error(ctx context.Context, args ...interface{})
 }
 ```
@@ -132,7 +158,7 @@ type Logger interface {
 func GetLogger() Logger
 ```
 
-GetLogger returns the global logger
+GetLogger returns the global logger If the global logger is not set, it will create a new one with gokit logger
 
 ### func NewLogger
 
@@ -140,7 +166,7 @@ GetLogger returns the global logger
 func NewLogger(log loggers.BaseLogger) Logger
 ```
 
-NewLogger creates a new logger with a provided BaseLogger
+NewLogger creates a new logger with a provided BaseLogger The default logger is gokit logger
 
 
 
