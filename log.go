@@ -10,9 +10,14 @@ import (
 
 var (
 	defaultLogger Logger
-	mu            sync.Mutex
-	once          sync.Once
+	mu            *sync.Mutex
+	once          *sync.Once
 )
+
+func init() {
+	mu = &sync.Mutex{}
+	once = &sync.Once{}
+}
 
 type logger struct {
 	baseLog loggers.BaseLogger
