@@ -10,6 +10,11 @@ import (
 
 var defaultLogger atomic.Pointer[Logger]
 
+func init() {
+	mu = &sync.Mutex{}
+	once = &sync.Once{}
+}
+
 type logger struct {
 	baseLog loggers.BaseLogger
 }
