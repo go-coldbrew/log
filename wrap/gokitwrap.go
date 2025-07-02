@@ -1,4 +1,4 @@
-//Package wrap provides multiple wrap functions to wrap log implementation of other log packages
+// Package wrap provides multiple wrap functions to wrap log implementation of other log packages
 package wrap
 
 import (
@@ -7,7 +7,7 @@ import (
 	"github.com/go-coldbrew/log"
 	"github.com/go-coldbrew/log/loggers"
 
-	basegokit "github.com/go-kit/kit/log"
+	basegokit "github.com/go-kit/log"
 )
 
 /*
@@ -17,8 +17,8 @@ type gokitwrap struct {
 	l log.Logger
 }
 
-func (g *gokitwrap) Log(keyvals ...interface{}) error {
-	vals := make([]interface{}, 0)
+func (g *gokitwrap) Log(keyvals ...any) error {
+	vals := make([]any, 0)
 	ctx := context.Background()
 	for _, val := range keyvals {
 		if c, ok := val.(context.Context); ok {

@@ -2,22 +2,13 @@ package log
 
 import (
 	"context"
-	"sync"
+	"sync/atomic"
 
 	"github.com/go-coldbrew/log/loggers"
 	"github.com/go-coldbrew/log/loggers/gokit"
 )
 
-var (
-	defaultLogger Logger
-	mu            *sync.Mutex
-	once          *sync.Once
-)
-
-func init() {
-	mu = &sync.Mutex{}
-	once = &sync.Once{}
-}
+var defaultLogger atomic.Pointer[Logger]
 
 type logger struct {
 	baseLog loggers.BaseLogger
@@ -31,23 +22,23 @@ func (l *logger) GetLevel() loggers.Level {
 	return l.baseLog.GetLevel()
 }
 
-func (l *logger) Debug(ctx context.Context, args ...interface{}) {
+func (l *logger) Debug(ctx context.Context, args ...any) {
 	l.Log(ctx, loggers.DebugLevel, 1, args...)
 }
 
-func (l *logger) Info(ctx context.Context, args ...interface{}) {
+func (l *logger) Info(ctx context.Context, args ...any) {
 	l.Log(ctx, loggers.InfoLevel, 1, args...)
 }
 
-func (l *logger) Warn(ctx context.Context, args ...interface{}) {
+func (l *logger) Warn(ctx context.Context, args ...any) {
 	l.Log(ctx, loggers.WarnLevel, 1, args...)
 }
 
-func (l *logger) Error(ctx context.Context, args ...interface{}) {
+func (l *logger) Error(ctx context.Context, args ...any) {
 	l.Log(ctx, loggers.ErrorLevel, 1, args...)
 }
 
-func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...interface{}) {
+func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...any) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -71,19 +62,19 @@ func NewLogger(log loggers.BaseLogger) Logger {
 // GetLogger returns the global logger
 // If the global logger is not set, it will create a new one with gokit logger
 func GetLogger() Logger {
-	if defaultLogger == nil {
-		once.Do(func() {
-			defaultLogger = NewLogger(gokit.NewLogger())
-		})
+	l := defaultLogger.Load()
+	if l == nil {
+		// If the default logger is not set, create a new one with gokit logger
+		gokitLogger := gokit.NewLogger()
+		newLogger := NewLogger(gokitLogger)
+		defaultLogger.CompareAndSwap(nil, &newLogger)
 	}
-	return defaultLogger
+	return *defaultLogger.Load()
 }
 
 // SetLogger sets the global logger
 func SetLogger(l Logger) {
 	if l != nil {
-		mu.Lock()
-		defer mu.Unlock()
-		defaultLogger = l
+		defaultLogger.Store(&l)
 	}
 }
