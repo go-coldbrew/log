@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/go-coldbrew/log/loggers"
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 )
 
 type logger struct {
@@ -17,7 +17,7 @@ type logger struct {
 	opt    loggers.Options
 }
 
-func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...interface{}) {
+func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...any) {
 	lgr := log.With(l.logger, l.opt.LevelFieldName, level.String())
 
 	if l.opt.CallerInfo {
@@ -28,9 +28,7 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 	// fetch fields from context and add them to logrus fields
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
-
-		ctxFields.Range(func(k, v interface{}) bool {
-
+		ctxFields.Range(func(k, v any) bool {
 			lgr = log.With(lgr, k, v)
 			return true
 		})
