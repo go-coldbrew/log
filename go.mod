@@ -1,6 +1,6 @@
 module github.com/go-coldbrew/log
 
-go 1.23.0
+go 1.23
 
 require (
 	github.com/GandalfUK/godoc2ghmd v0.0.0-20170102215518-d78ed169ffe1
