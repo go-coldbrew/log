@@ -10,11 +10,6 @@ import (
 
 var defaultLogger atomic.Pointer[Logger]
 
-func init() {
-	mu = &sync.Mutex{}
-	once = &sync.Once{}
-}
-
 type logger struct {
 	baseLog loggers.BaseLogger
 }
@@ -27,23 +22,23 @@ func (l *logger) GetLevel() loggers.Level {
 	return l.baseLog.GetLevel()
 }
 
-func (l *logger) Debug(ctx context.Context, args ...interface{}) {
+func (l *logger) Debug(ctx context.Context, args ...any) {
 	l.Log(ctx, loggers.DebugLevel, 1, args...)
 }
 
-func (l *logger) Info(ctx context.Context, args ...interface{}) {
+func (l *logger) Info(ctx context.Context, args ...any) {
 	l.Log(ctx, loggers.InfoLevel, 1, args...)
 }
 
-func (l *logger) Warn(ctx context.Context, args ...interface{}) {
+func (l *logger) Warn(ctx context.Context, args ...any) {
 	l.Log(ctx, loggers.WarnLevel, 1, args...)
 }
 
-func (l *logger) Error(ctx context.Context, args ...interface{}) {
+func (l *logger) Error(ctx context.Context, args ...any) {
 	l.Log(ctx, loggers.ErrorLevel, 1, args...)
 }
 
-func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...interface{}) {
+func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...any) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
