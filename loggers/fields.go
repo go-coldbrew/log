@@ -31,15 +31,18 @@ func (o *LogFields) Del(key string) {
 // AddToLogContext adds log fields to context.
 // Any info added here will be added to all logs using this context
 func AddToLogContext(ctx context.Context, key string, value interface{}) context.Context {
-	data := FromContext(ctx)
-	if data == nil {
-		ctx = context.WithValue(ctx, contextKey, new(LogFields))
-		data = FromContext(ctx)
+	existingFields := FromContext(ctx)
+	newFields := &LogFields{}
+
+	if existingFields != nil {
+		existingFields.Range(func(key, value interface{}) bool {
+			newFields.Add(key.(string), value)
+			return true
+		})
 	}
-	if data != nil {
-		data.Add(key, value)
-	}
-	return ctx
+
+	newFields.Add(key, value)
+	return context.WithValue(ctx, contextKey, newFields)
 }
 
 // FromContext fetchs log fields from provided context
