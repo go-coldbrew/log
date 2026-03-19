@@ -17,7 +17,7 @@ type LogFields struct {
 }
 
 // Add or modify log fields
-func (o *LogFields) Add(key string, value interface{}) {
+func (o *LogFields) Add(key string, value any) {
 	if len(key) > 0 {
 		o.Store(key, value)
 	}
@@ -30,7 +30,7 @@ func (o *LogFields) Del(key string) {
 
 // AddToLogContext adds log fields to context.
 // Any info added here will be added to all logs using this context
-func AddToLogContext(ctx context.Context, key string, value interface{}) context.Context {
+func AddToLogContext(ctx context.Context, key string, value any) context.Context {
 	data := FromContext(ctx)
 	if data == nil {
 		ctx = context.WithValue(ctx, contextKey, new(LogFields))

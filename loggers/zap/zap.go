@@ -18,10 +18,10 @@ type logger struct {
 // COLBREW_CALL_STACK_SIZE number stack frame involved between the logger call from application to zap call.
 const COLBREW_CALL_STACK_SIZE = 3
 
-func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...interface{}) {
+func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...any) {
 
 	logger := l.logger
-	var msg interface{}
+	var msg any
 	//if there are odd number of elements in args, first will be treated as a message and rest will
 	//be key value pair to log in json format
 	if len(args)%2 != 0 {
@@ -32,7 +32,7 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
-		ctxFields.Range(func(k, v interface{}) bool { logger = logger.With(k, v); return true })
+		ctxFields.Range(func(k, v any) bool { logger = logger.With(k, v); return true })
 	}
 
 	logFunc := l.logger.Error

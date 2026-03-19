@@ -19,24 +19,24 @@ func GetLevel() loggers.Level {
 
 // Debug writes out a debug log to global logger
 // This is a convenience function for GetLogger().Log(loggers.DebugLevel, 1, args...)
-func Debug(ctx context.Context, args ...interface{}) {
+func Debug(ctx context.Context, args ...any) {
 	GetLogger().Log(ctx, loggers.DebugLevel, 1, args...)
 }
 
 // Info writes out an info log to global logger
 // This is a convenience function for GetLogger().Log(loggers.InfoLevel, 1, args...)
-func Info(ctx context.Context, args ...interface{}) {
+func Info(ctx context.Context, args ...any) {
 	GetLogger().Log(ctx, loggers.InfoLevel, 1, args...)
 }
 
 // Warn writes out a warning log to global logger
 // This is a convenience function for GetLogger().Log(loggers.WarnLevel, 1, args...)
-func Warn(ctx context.Context, args ...interface{}) {
+func Warn(ctx context.Context, args ...any) {
 	GetLogger().Log(ctx, loggers.WarnLevel, 1, args...)
 }
 
 // Error writes out an error log to global logger
 // This is a convenience function for GetLogger().Log(loggers.ErrorLevel, 1, args...)
-func Error(ctx context.Context, args ...interface{}) {
+func Error(ctx context.Context, args ...any) {
 	GetLogger().Log(ctx, loggers.ErrorLevel, 1, args...)
 }
