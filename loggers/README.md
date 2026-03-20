@@ -2,6 +2,8 @@
 
 [![GoDoc](https://img.shields.io/badge/pkg.go.dev-doc-blue)](http://pkg.go.dev/github.com/go-coldbrew/log)
 
+
+
 # loggers
 
 ```go
@@ -14,31 +16,31 @@ Package loggers provides loggers implementation for log package
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
-- [func AddToLogContext(ctx context.Context, key string, value interface{}) context.Context](<#func-addtologcontext>)
-- [func FetchCallerInfo(skip int, depth int) (function string, file string, line int)](<#func-fetchcallerinfo>)
-- [type BaseLogger](<#type-baselogger>)
-- [type Level](<#type-level>)
-  - [func ParseLevel(lvl string) (Level, error)](<#func-parselevel>)
-  - [func (level Level) String() string](<#func-level-string>)
-- [type LogFields](<#type-logfields>)
-  - [func FromContext(ctx context.Context) *LogFields](<#func-fromcontext>)
-  - [func (o *LogFields) Add(key string, value interface{})](<#func-logfields-add>)
-  - [func (o *LogFields) Del(key string)](<#func-logfields-del>)
-- [type Option](<#type-option>)
-  - [func WithCallerFieldName(name string) Option](<#func-withcallerfieldname>)
-  - [func WithCallerFileDepth(depth int) Option](<#func-withcallerfiledepth>)
-  - [func WithCallerInfo(callerInfo bool) Option](<#func-withcallerinfo>)
-  - [func WithJSONLogs(json bool) Option](<#func-withjsonlogs>)
-  - [func WithLevelFieldName(name string) Option](<#func-withlevelfieldname>)
-  - [func WithReplaceStdLogger(replaceStdLogger bool) Option](<#func-withreplacestdlogger>)
-  - [func WithTimestampFieldName(name string) Option](<#func-withtimestampfieldname>)
-- [type Options](<#type-options>)
-  - [func GetDefaultOptions() Options](<#func-getdefaultoptions>)
+- [func AddToLogContext\(ctx context.Context, key string, value any\) context.Context](<#AddToLogContext>)
+- [func FetchCallerInfo\(skip int, depth int\) \(function string, file string, line int\)](<#FetchCallerInfo>)
+- [type BaseLogger](<#BaseLogger>)
+- [type Level](<#Level>)
+  - [func ParseLevel\(lvl string\) \(Level, error\)](<#ParseLevel>)
+  - [func \(level Level\) String\(\) string](<#Level.String>)
+- [type LogFields](<#LogFields>)
+  - [func FromContext\(ctx context.Context\) \*LogFields](<#FromContext>)
+  - [func \(o \*LogFields\) Add\(key string, value any\)](<#LogFields.Add>)
+  - [func \(o \*LogFields\) Del\(key string\)](<#LogFields.Del>)
+- [type Option](<#Option>)
+  - [func WithCallerFieldName\(name string\) Option](<#WithCallerFieldName>)
+  - [func WithCallerFileDepth\(depth int\) Option](<#WithCallerFileDepth>)
+  - [func WithCallerInfo\(callerInfo bool\) Option](<#WithCallerInfo>)
+  - [func WithJSONLogs\(json bool\) Option](<#WithJSONLogs>)
+  - [func WithLevelFieldName\(name string\) Option](<#WithLevelFieldName>)
+  - [func WithReplaceStdLogger\(replaceStdLogger bool\) Option](<#WithReplaceStdLogger>)
+  - [func WithTimestampFieldName\(name string\) Option](<#WithTimestampFieldName>)
+- [type Options](<#Options>)
+  - [func GetDefaultOptions\(\) Options](<#GetDefaultOptions>)
 
 
 ## Constants
 
-These are the different logging levels. You can set the logging level to log on your instance of logger, obtained with \`logs.New\(\)\`.
+<a name="ErrorLevel"></a>These are the different logging levels. You can set the logging level to log on your instance of logger, obtained with \`logs.New\(\)\`.
 
 ```go
 const (
@@ -57,7 +59,7 @@ const (
 
 ## Variables
 
-AllLevels A constant exposing all logging levels
+<a name="AllLevels"></a>AllLevels A constant exposing all logging levels
 
 ```go
 var AllLevels = []Level{
@@ -68,7 +70,7 @@ var AllLevels = []Level{
 }
 ```
 
-DefaultOptions stores all default options in loggers package These options are used by all loggers
+<a name="DefaultOptions"></a>DefaultOptions stores all default options in loggers package These options are used by all loggers
 
 ```go
 var (
@@ -85,14 +87,16 @@ var (
 )
 ```
 
+<a name="AddToLogContext"></a>
 ## func AddToLogContext
 
 ```go
-func AddToLogContext(ctx context.Context, key string, value interface{}) context.Context
+func AddToLogContext(ctx context.Context, key string, value any) context.Context
 ```
 
 AddToLogContext adds log fields to context. Any info added here will be added to all logs using this context
 
+<a name="FetchCallerInfo"></a>
 ## func FetchCallerInfo
 
 ```go
@@ -101,6 +105,7 @@ func FetchCallerInfo(skip int, depth int) (function string, file string, line in
 
 FetchCallerInfo fetches function name, file name and line number from stack skip is the number of stack frames to ascend, with 0 identifying the caller of FetchCallerInfo. depth is the depth of file to use in caller info
 
+<a name="BaseLogger"></a>
 ## type BaseLogger
 
 BaseLogger is the interface that needs to be implemented by client loggers
@@ -114,7 +119,7 @@ type BaseLogger interface {
     // Skip is the number of stack frames to skip before getting the file name and line number.
     // If skip is 0, the file and line of the caller of Log is logged.
     // ctx is the context of the log message. It is used to pass the context fields to the logger
-    Log(ctx context.Context, level Level, skip int, args ...interface{})
+    Log(ctx context.Context, level Level, skip int, args ...any)
     // SetLevel sets the level of the logger
     SetLevel(level Level)
     // GetLevel gets the level of the logger
@@ -122,6 +127,7 @@ type BaseLogger interface {
 }
 ```
 
+<a name="Level"></a>
 ## type Level
 
 Level type
@@ -130,6 +136,7 @@ Level type
 type Level uint32
 ```
 
+<a name="ParseLevel"></a>
 ### func ParseLevel
 
 ```go
@@ -138,14 +145,16 @@ func ParseLevel(lvl string) (Level, error)
 
 ParseLevel takes a string level and returns the log level constant.
 
+<a name="Level.String"></a>
 ### func \(Level\) String
 
 ```go
 func (level Level) String() string
 ```
 
-Convert the Level to a string. E.g.  ErrorLevel becomes "error".
+Convert the Level to a string. E.g. ErrorLevel becomes "error".
 
+<a name="LogFields"></a>
 ## type LogFields
 
 LogFields contains all fields that have to be added to logs
@@ -156,6 +165,7 @@ type LogFields struct {
 }
 ```
 
+<a name="FromContext"></a>
 ### func FromContext
 
 ```go
@@ -164,14 +174,16 @@ func FromContext(ctx context.Context) *LogFields
 
 FromContext fetchs log fields from provided context
 
+<a name="LogFields.Add"></a>
 ### func \(\*LogFields\) Add
 
 ```go
-func (o *LogFields) Add(key string, value interface{})
+func (o *LogFields) Add(key string, value any)
 ```
 
 Add or modify log fields
 
+<a name="LogFields.Del"></a>
 ### func \(\*LogFields\) Del
 
 ```go
@@ -180,6 +192,7 @@ func (o *LogFields) Del(key string)
 
 Del deletes a log field entry
 
+<a name="Option"></a>
 ## type Option
 
 Option defines an option for BaseLogger
@@ -188,6 +201,7 @@ Option defines an option for BaseLogger
 type Option func(*Options)
 ```
 
+<a name="WithCallerFieldName"></a>
 ### func WithCallerFieldName
 
 ```go
@@ -196,6 +210,7 @@ func WithCallerFieldName(name string) Option
 
 WithCallerFieldName sets the name of callerinfo field
 
+<a name="WithCallerFileDepth"></a>
 ### func WithCallerFileDepth
 
 ```go
@@ -204,6 +219,7 @@ func WithCallerFileDepth(depth int) Option
 
 WithCallerFileDepth sets the depth of file to use in caller info
 
+<a name="WithCallerInfo"></a>
 ### func WithCallerInfo
 
 ```go
@@ -212,6 +228,7 @@ func WithCallerInfo(callerInfo bool) Option
 
 WithCallerInfo enables/disables adding caller info to logs
 
+<a name="WithJSONLogs"></a>
 ### func WithJSONLogs
 
 ```go
@@ -220,6 +237,7 @@ func WithJSONLogs(json bool) Option
 
 WithJSONLogs enables/disables json logs
 
+<a name="WithLevelFieldName"></a>
 ### func WithLevelFieldName
 
 ```go
@@ -228,6 +246,7 @@ func WithLevelFieldName(name string) Option
 
 WithLevelFieldName sets the name of the level field in logs
 
+<a name="WithReplaceStdLogger"></a>
 ### func WithReplaceStdLogger
 
 ```go
@@ -236,6 +255,7 @@ func WithReplaceStdLogger(replaceStdLogger bool) Option
 
 WithReplaceStdLogger enables/disables replacing std logger
 
+<a name="WithTimestampFieldName"></a>
 ### func WithTimestampFieldName
 
 ```go
@@ -244,6 +264,7 @@ func WithTimestampFieldName(name string) Option
 
 WithTimestampFieldName sets the name of the time stamp field in logs
 
+<a name="Options"></a>
 ## type Options
 
 Options contain all common options for BaseLoggers
@@ -269,6 +290,7 @@ type Options struct {
 }
 ```
 
+<a name="GetDefaultOptions"></a>
 ### func GetDefaultOptions
 
 ```go
@@ -276,7 +298,5 @@ func GetDefaultOptions() Options
 ```
 
 GetDefaultOptions fetches loggers default options
-
-
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

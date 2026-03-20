@@ -2,13 +2,15 @@
 
 [![GoDoc](https://img.shields.io/badge/pkg.go.dev-doc-blue)](http://pkg.go.dev/github.com/go-coldbrew/log)
 
+
+
 # log
 
 ```go
 import "github.com/go-coldbrew/log"
 ```
 
-Package log provides a minimal interface for structured logging in services. ColdBrew uses this log package for all logs.
+Package log provides a minimal interface for structured logging in services. ColdBrew uses this log package for all logs. It provides a simple interface to log errors, warnings, info and debug messages. It also provides a mechanism to add contextual information to logs. available implementations of BaseLogger are in loggers package. You can also implement your own BaseLogger to use with this package.
 
 ### How To Use
 
@@ -28,7 +30,11 @@ logger := log.NewLogger(gokit.NewLogger())
 logger.Info(ctx, "key", "value")
 ```
 
-Note: Preferred logging output is in either logfmt or json format, so to facilitate these log function arguments should be in pairs of key\-value
+Note:
+
+```
+Preferred logging output is in either logfmt or json format, so to facilitate these log function arguments should be in pairs of key-value
+```
 
 ### Contextual Logs
 
@@ -44,36 +50,39 @@ this package is based on https://github.com/carousell/Orion/tree/master/utils/lo
 
 ## Index
 
-- [func Debug(ctx context.Context, args ...interface{})](<#func-debug>)
-- [func Error(ctx context.Context, args ...interface{})](<#func-error>)
-- [func GetLevel() loggers.Level](<#func-getlevel>)
-- [func GetOverridenLogLevel(ctx context.Context) (loggers.Level, bool)](<#func-getoverridenloglevel>)
-- [func Info(ctx context.Context, args ...interface{})](<#func-info>)
-- [func OverrideLogLevel(ctx context.Context, level loggers.Level) context.Context](<#func-overrideloglevel>)
-- [func SetLevel(level loggers.Level)](<#func-setlevel>)
-- [func SetLogger(l Logger)](<#func-setlogger>)
-- [func Warn(ctx context.Context, args ...interface{})](<#func-warn>)
-- [type Logger](<#type-logger>)
-  - [func GetLogger() Logger](<#func-getlogger>)
-  - [func NewLogger(log loggers.BaseLogger) Logger](<#func-newlogger>)
+- [func Debug\(ctx context.Context, args ...any\)](<#Debug>)
+- [func Error\(ctx context.Context, args ...any\)](<#Error>)
+- [func GetLevel\(\) loggers.Level](<#GetLevel>)
+- [func GetOverridenLogLevel\(ctx context.Context\) \(loggers.Level, bool\)](<#GetOverridenLogLevel>)
+- [func Info\(ctx context.Context, args ...any\)](<#Info>)
+- [func OverrideLogLevel\(ctx context.Context, level loggers.Level\) context.Context](<#OverrideLogLevel>)
+- [func SetLevel\(level loggers.Level\)](<#SetLevel>)
+- [func SetLogger\(l Logger\)](<#SetLogger>)
+- [func Warn\(ctx context.Context, args ...any\)](<#Warn>)
+- [type Logger](<#Logger>)
+  - [func GetLogger\(\) Logger](<#GetLogger>)
+  - [func NewLogger\(log loggers.BaseLogger\) Logger](<#NewLogger>)
 
 
+<a name="Debug"></a>
 ## func Debug
 
 ```go
-func Debug(ctx context.Context, args ...interface{})
+func Debug(ctx context.Context, args ...any)
 ```
 
-Debug writes out a debug log to global logger This is a convenience function for GetLogger\(\).Log\(loggers.DebugLevel, 1, args...\)
+Debug writes out a debug log to global logger This is a convenience function for GetLogger\(\).Log\(ctx, loggers.DebugLevel, 1, args...\)
 
+<a name="Error"></a>
 ## func Error
 
 ```go
-func Error(ctx context.Context, args ...interface{})
+func Error(ctx context.Context, args ...any)
 ```
 
-Error writes out an error log to global logger This is a convenience function for GetLogger\(\).Log\(loggers.ErrorLevel, 1, args...\)
+Error writes out an error log to global logger This is a convenience function for GetLogger\(\).Log\(ctx, loggers.ErrorLevel, 1, args...\)
 
+<a name="GetLevel"></a>
 ## func GetLevel
 
 ```go
@@ -82,6 +91,7 @@ func GetLevel() loggers.Level
 
 GetLevel returns the current log level This is useful for checking if a log level is enabled
 
+<a name="GetOverridenLogLevel"></a>
 ## func GetOverridenLogLevel
 
 ```go
@@ -90,14 +100,16 @@ func GetOverridenLogLevel(ctx context.Context) (loggers.Level, bool)
 
 GetOverridenLogLevel fetches overriden log level from context If no log level is overriden, it returns false If log level is overriden, it returns the log level and true
 
+<a name="Info"></a>
 ## func Info
 
 ```go
-func Info(ctx context.Context, args ...interface{})
+func Info(ctx context.Context, args ...any)
 ```
 
-Info writes out an info log to global logger This is a convenience function for GetLogger\(\).Log\(loggers.InfoLevel, 1, args...\)
+Info writes out an info log to global logger This is a convenience function for GetLogger\(\).Log\(ctx, loggers.InfoLevel, 1, args...\)
 
+<a name="OverrideLogLevel"></a>
 ## func OverrideLogLevel
 
 ```go
@@ -106,6 +118,7 @@ func OverrideLogLevel(ctx context.Context, level loggers.Level) context.Context
 
 OverrideLogLevel allows the default log level to be overridden from request context This is useful when you want to override the log level for a specific request For example, you can set the log level to debug for a specific request while the default log level is set to info
 
+<a name="SetLevel"></a>
 ## func SetLevel
 
 ```go
@@ -114,6 +127,7 @@ func SetLevel(level loggers.Level)
 
 SetLevel sets the log level to filter logs
 
+<a name="SetLogger"></a>
 ## func SetLogger
 
 ```go
@@ -122,14 +136,16 @@ func SetLogger(l Logger)
 
 SetLogger sets the global logger
 
+<a name="Warn"></a>
 ## func Warn
 
 ```go
-func Warn(ctx context.Context, args ...interface{})
+func Warn(ctx context.Context, args ...any)
 ```
 
-Warn writes out a warning log to global logger This is a convenience function for GetLogger\(\).Log\(loggers.WarnLevel, 1, args...\)
+Warn writes out a warning log to global logger This is a convenience function for GetLogger\(\).Log\(ctx, loggers.WarnLevel, 1, args...\)
 
+<a name="Logger"></a>
 ## type Logger
 
 Logger interface is implemnted by the log implementation to provide the log methods to the application code.
@@ -139,19 +155,20 @@ type Logger interface {
     loggers.BaseLogger
     // Debug logs a message at level Debug.
     // ctx is used to extract the request id and other context information.
-    Debug(ctx context.Context, args ...interface{})
+    Debug(ctx context.Context, args ...any)
     // Info logs a message at level Info.
     // ctx is used to extract the request id and other context information.
-    Info(ctx context.Context, args ...interface{})
+    Info(ctx context.Context, args ...any)
     // Warn logs a message at level Warn.
     // ctx is used to extract the request id and other context information.
-    Warn(ctx context.Context, args ...interface{})
+    Warn(ctx context.Context, args ...any)
     // Error logs a message at level Error.
     // ctx is used to extract the request id and other context information.
-    Error(ctx context.Context, args ...interface{})
+    Error(ctx context.Context, args ...any)
 }
 ```
 
+<a name="GetLogger"></a>
 ### func GetLogger
 
 ```go
@@ -160,6 +177,7 @@ func GetLogger() Logger
 
 GetLogger returns the global logger If the global logger is not set, it will create a new one with gokit logger
 
+<a name="NewLogger"></a>
 ### func NewLogger
 
 ```go
@@ -167,7 +185,5 @@ func NewLogger(log loggers.BaseLogger) Logger
 ```
 
 NewLogger creates a new logger with a provided BaseLogger The default logger is gokit logger
-
-
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

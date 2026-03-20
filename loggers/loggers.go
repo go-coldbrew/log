@@ -77,7 +77,7 @@ type BaseLogger interface {
 	// Skip is the number of stack frames to skip before getting the file name and line number.
 	// If skip is 0, the file and line of the caller of Log is logged.
 	// ctx is the context of the log message. It is used to pass the context fields to the logger
-	Log(ctx context.Context, level Level, skip int, args ...interface{})
+	Log(ctx context.Context, level Level, skip int, args ...any)
 	// SetLevel sets the level of the logger
 	SetLevel(level Level)
 	// GetLevel gets the level of the logger

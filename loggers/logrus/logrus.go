@@ -31,13 +31,13 @@ func toLogrusLogLevel(level loggers.Level) log.Level {
 	}
 }
 
-func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...interface{}) {
+func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...any) {
 	fields := make(log.Fields)
 
 	// fetch fields from context and add them to logrus fields
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
-		ctxFields.Range(func(k, v interface{}) bool {
+		ctxFields.Range(func(k, v any) bool {
 			if str, ok := k.(string); ok {
 				fields[str] = v
 			}

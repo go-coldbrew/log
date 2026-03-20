@@ -2,6 +2,8 @@
 
 [![GoDoc](https://img.shields.io/badge/pkg.go.dev-doc-blue)](http://pkg.go.dev/github.com/go-coldbrew/log)
 
+
+
 # zap
 
 ```go
@@ -13,17 +15,18 @@ Package zap provides a BaseLogger implementation for uber/zap
 ## Index
 
 - [Constants](<#constants>)
-- [func NewLogger(options ...loggers.Option) loggers.BaseLogger](<#func-newlogger>)
+- [func NewLogger\(options ...loggers.Option\) loggers.BaseLogger](<#NewLogger>)
 
 
 ## Constants
 
-COLBREW\_CALL\_STACK\_SIZE number stack frame involved between the logger call from application to zap call.
+<a name="COLBREW_CALL_STACK_SIZE"></a>COLBREW\_CALL\_STACK\_SIZE number stack frame involved between the logger call from application to zap call.
 
 ```go
 const COLBREW_CALL_STACK_SIZE = 3
 ```
 
+<a name="NewLogger"></a>
 ## func NewLogger
 
 ```go

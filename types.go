@@ -11,14 +11,14 @@ type Logger interface {
 	loggers.BaseLogger
 	// Debug logs a message at level Debug.
 	// ctx is used to extract the request id and other context information.
-	Debug(ctx context.Context, args ...interface{})
+	Debug(ctx context.Context, args ...any)
 	// Info logs a message at level Info.
 	// ctx is used to extract the request id and other context information.
-	Info(ctx context.Context, args ...interface{})
+	Info(ctx context.Context, args ...any)
 	// Warn logs a message at level Warn.
 	// ctx is used to extract the request id and other context information.
-	Warn(ctx context.Context, args ...interface{})
+	Warn(ctx context.Context, args ...any)
 	// Error logs a message at level Error.
 	// ctx is used to extract the request id and other context information.
-	Error(ctx context.Context, args ...interface{})
+	Error(ctx context.Context, args ...any)
 }
