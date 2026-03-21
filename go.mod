@@ -3,7 +3,7 @@ module github.com/go-coldbrew/log
 go 1.25.0
 
 require (
-	github.com/go-coldbrew/options v0.2.3
+	github.com/go-coldbrew/options v0.2.4
 	github.com/go-kit/log v0.2.1
 	github.com/sirupsen/logrus v1.9.4
 	go.uber.org/zap v1.27.1

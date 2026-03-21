@@ -34,9 +34,9 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		})
 	}
 	if len(args) == 1 {
-		lgr.Log("msg", args[0])
+		_ = lgr.Log("msg", args[0])
 	} else {
-		lgr.Log(args...)
+		_ = lgr.Log(args...)
 	}
 }
 
