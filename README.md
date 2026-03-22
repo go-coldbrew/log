@@ -50,6 +50,7 @@ this package is based on https://github.com/carousell/Orion/tree/master/utils/lo
 
 ## Index
 
+- [func AddToContext\(ctx context.Context, key string, value any\) context.Context](<#AddToContext>)
 - [func Debug\(ctx context.Context, args ...any\)](<#Debug>)
 - [func Error\(ctx context.Context, args ...any\)](<#Error>)
 - [func GetLevel\(\) loggers.Level](<#GetLevel>)
@@ -63,6 +64,15 @@ this package is based on https://github.com/carousell/Orion/tree/master/utils/lo
   - [func GetLogger\(\) Logger](<#GetLogger>)
   - [func NewLogger\(log loggers.BaseLogger\) Logger](<#NewLogger>)
 
+
+<a name="AddToContext"></a>
+## func AddToContext
+
+```go
+func AddToContext(ctx context.Context, key string, value any) context.Context
+```
+
+AddToContext adds log fields to the provided context. Any info added here will be included in all logs that use the returned context. This is the preferred entry point for adding contextual logging fields and is implemented internally using loggers.AddToLogContext.
 
 <a name="Debug"></a>
 ## func Debug

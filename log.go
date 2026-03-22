@@ -78,3 +78,14 @@ func SetLogger(l Logger) {
 		defaultLogger.Store(&l)
 	}
 }
+
+// AddToContext adds log fields to the provided context.
+// Any info added here will be included in all logs that use the returned context.
+// This is the preferred entry point for adding contextual logging fields and is implemented
+// internally using loggers.AddToLogContext.
+func AddToContext(ctx context.Context, key string, value any) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return loggers.AddToLogContext(ctx, key, value)
+}
