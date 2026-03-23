@@ -77,6 +77,35 @@ func AddToContext(ctx context.Context, key string, value any) context.Context
 
 AddToContext adds log fields to the provided context. Any info added here will be included in all logs that use the returned context. This is the preferred entry point for adding contextual logging fields and is implemented internally using loggers.AddToLogContext.
 
+<details><summary>Example</summary>
+<p>
+
+
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/go-coldbrew/log"
+)
+
+func main() {
+	ctx := context.Background()
+
+	// Add per-request fields to context — these appear in all log lines
+	ctx = log.AddToContext(ctx, "request_id", "abc-123")
+	ctx = log.AddToContext(ctx, "user_id", "user-42")
+
+	// Subsequent log calls include the context fields
+	log.Info(ctx, "processing request")
+}
+```
+
+</p>
+</details>
+
 <a name="Debug"></a>
 ## func [Debug](<https://github.com/go-coldbrew/log/blob/main/utils.go#L22>)
 
@@ -94,6 +123,29 @@ func Error(ctx context.Context, args ...any)
 ```
 
 Error writes out an error log to global logger This is a convenience function for GetLogger\(\).Log\(ctx, loggers.ErrorLevel, 1, args...\)
+
+<details><summary>Example</summary>
+<p>
+
+
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/go-coldbrew/log"
+)
+
+func main() {
+	ctx := context.Background()
+	log.Error(ctx, "database connection failed", "retrying in 5s")
+}
+```
+
+</p>
+</details>
 
 <a name="GetLevel"></a>
 ## func [GetLevel](<https://github.com/go-coldbrew/log/blob/main/utils.go#L16>)
@@ -121,6 +173,29 @@ func Info(ctx context.Context, args ...any)
 ```
 
 Info writes out an info log to global logger This is a convenience function for GetLogger\(\).Log\(ctx, loggers.InfoLevel, 1, args...\)
+
+<details><summary>Example</summary>
+<p>
+
+
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/go-coldbrew/log"
+)
+
+func main() {
+	ctx := context.Background()
+	log.Info(ctx, "service started")
+}
+```
+
+</p>
+</details>
 
 <a name="OverrideLogLevel"></a>
 ## func [OverrideLogLevel](<https://github.com/go-coldbrew/log/blob/main/options.go#L16>)
