@@ -94,12 +94,13 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// Add per-request fields to context — these appear in all log lines
+	// Add per-request fields to context — these appear in all subsequent log lines
 	ctx = log.AddToContext(ctx, "request_id", "abc-123")
 	ctx = log.AddToContext(ctx, "user_id", "user-42")
 
-	// Subsequent log calls include the context fields
-	log.Info(ctx, "processing request")
+	// All logs using this context now include request_id and user_id
+	log.Info(ctx, "msg", "processing request", "step", "validation")
+	log.Info(ctx, "msg", "request complete", "status", "ok", "duration_ms", 42)
 }
 ```
 
@@ -140,7 +141,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	log.Error(ctx, "database connection failed", "retrying in 5s")
+	log.Error(ctx, "msg", "database connection failed", "host", "db.internal", "port", 5432, "retry_in", "5s")
 }
 ```
 
@@ -190,7 +191,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	log.Info(ctx, "service started")
+	log.Info(ctx, "msg", "order processed", "order_id", "ORD-123", "items", 3)
 }
 ```
 
