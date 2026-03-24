@@ -99,6 +99,36 @@ func AddToLogContext(ctx context.Context, key string, value any) context.Context
 
 AddToLogContext adds log fields to context. Any info added here will be added to all logs using this context
 
+<details><summary>Example</summary>
+<p>
+
+AddToLogContext adds structured fields at the lower level, useful when building custom logger integrations or interceptors.
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/go-coldbrew/log"
+	"github.com/go-coldbrew/log/loggers"
+)
+
+func main() {
+	ctx := context.Background()
+
+	// Add structured fields that propagate through the interceptor chain
+	ctx = loggers.AddToLogContext(ctx, "service", "payment-gateway")
+	ctx = loggers.AddToLogContext(ctx, "trace_id", "abc-def-123")
+
+	// These fields appear in every log line that uses this context
+	log.Info(ctx, "msg", "charge initiated", "amount", 1999, "currency", "USD")
+}
+```
+
+</p>
+</details>
+
 <a name="FetchCallerInfo"></a>
 ## func [FetchCallerInfo](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L191>)
 
