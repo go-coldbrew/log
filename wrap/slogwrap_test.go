@@ -1,0 +1,340 @@
+package wrap
+
+import (
+	"context"
+	"log/slog"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/go-coldbrew/log"
+	"github.com/go-coldbrew/log/loggers"
+)
+
+// captureLogger is a mock BaseLogger that records log calls for inspection.
+type captureLogger struct {
+	mu      sync.Mutex
+	entries []capturedEntry
+	level   loggers.Level
+}
+
+type capturedEntry struct {
+	Level loggers.Level
+	Args  []any
+}
+
+func (c *captureLogger) Log(_ context.Context, level loggers.Level, _ int, args ...any) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.entries = append(c.entries, capturedEntry{Level: level, Args: args})
+}
+
+func (c *captureLogger) SetLevel(level loggers.Level) { c.level = level }
+func (c *captureLogger) GetLevel() loggers.Level       { return c.level }
+
+func (c *captureLogger) lastEntry() capturedEntry {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.entries) == 0 {
+		return capturedEntry{}
+	}
+	return c.entries[len(c.entries)-1]
+}
+
+func (c *captureLogger) count() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.entries)
+}
+
+func newCaptureLogger(level loggers.Level) (*captureLogger, log.Logger) {
+	cl := &captureLogger{level: level}
+	return cl, log.NewLogger(cl)
+}
+
+func argsContain(args []any, key, value string) bool {
+	for i := 0; i < len(args)-1; i += 2 {
+		k, _ := args[i].(string)
+		v, _ := args[i+1].(string)
+		if k == key && v == value {
+			return true
+		}
+	}
+	return false
+}
+
+func TestToSlogHandler(t *testing.T) {
+	_, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+	if h == nil {
+		t.Fatal("expected non-nil handler")
+	}
+	var _ slog.Handler = h
+}
+
+func TestToSlogLogger(t *testing.T) {
+	_, l := newCaptureLogger(loggers.DebugLevel)
+	sl := ToSlogLogger(l)
+	if sl == nil {
+		t.Fatal("expected non-nil slog.Logger")
+	}
+}
+
+func TestHandleBasic(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	var record slog.Record
+	record.Level = slog.LevelInfo
+	record.Message = "hello"
+	record.AddAttrs(slog.String("key", "value"))
+
+	err := h.Handle(context.Background(), record)
+	if err != nil {
+		t.Fatalf("Handle returned error: %v", err)
+	}
+
+	entry := cl.lastEntry()
+	if entry.Level != loggers.InfoLevel {
+		t.Errorf("expected InfoLevel, got %v", entry.Level)
+	}
+	if !argsContain(entry.Args, "msg", "hello") {
+		t.Errorf("expected msg=hello in args, got %v", entry.Args)
+	}
+	if !argsContain(entry.Args, "key", "value") {
+		t.Errorf("expected key=value in args, got %v", entry.Args)
+	}
+}
+
+func TestEnabled(t *testing.T) {
+	_, l := newCaptureLogger(loggers.InfoLevel)
+	h := ToSlogHandler(l)
+
+	if !h.Enabled(context.Background(), slog.LevelInfo) {
+		t.Error("expected Info to be enabled at InfoLevel")
+	}
+	if !h.Enabled(context.Background(), slog.LevelError) {
+		t.Error("expected Error to be enabled at InfoLevel")
+	}
+	if h.Enabled(context.Background(), slog.LevelDebug) {
+		t.Error("expected Debug to be disabled at InfoLevel")
+	}
+}
+
+func TestWithAttrs(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	h2 := h.WithAttrs([]slog.Attr{slog.String("service", "test-svc")})
+
+	record := slog.Record{}
+	record.Level = slog.LevelInfo
+	record.Message = "with attrs"
+
+	_ = h2.Handle(context.Background(), record)
+
+	entry := cl.lastEntry()
+	if !argsContain(entry.Args, "service", "test-svc") {
+		t.Errorf("expected service=test-svc from WithAttrs, got %v", entry.Args)
+	}
+}
+
+func TestWithAttrsEmpty(t *testing.T) {
+	_, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+	h2 := h.WithAttrs(nil)
+	if h2 != h {
+		t.Error("expected same handler for empty WithAttrs")
+	}
+}
+
+func TestWithGroup(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	h2 := h.WithGroup("request")
+
+	record := slog.Record{}
+	record.Level = slog.LevelInfo
+	record.Message = "grouped"
+	record.AddAttrs(slog.String("id", "abc-123"))
+
+	_ = h2.Handle(context.Background(), record)
+
+	entry := cl.lastEntry()
+	if !argsContain(entry.Args, "request.id", "abc-123") {
+		t.Errorf("expected request.id=abc-123, got %v", entry.Args)
+	}
+}
+
+func TestWithGroupEmpty(t *testing.T) {
+	_, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+	h2 := h.WithGroup("")
+	if h2 != h {
+		t.Error("expected same handler for empty WithGroup")
+	}
+}
+
+func TestNestedGroups(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	h2 := h.WithGroup("http").WithGroup("request")
+
+	record := slog.Record{}
+	record.Level = slog.LevelInfo
+	record.Message = "nested"
+	record.AddAttrs(slog.String("method", "GET"))
+
+	_ = h2.Handle(context.Background(), record)
+
+	entry := cl.lastEntry()
+	if !argsContain(entry.Args, "http.request.method", "GET") {
+		t.Errorf("expected http.request.method=GET, got %v", entry.Args)
+	}
+}
+
+func TestWithGroupAndAttrs(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	h2 := h.WithGroup("app").WithAttrs([]slog.Attr{slog.String("version", "1.0")})
+
+	record := slog.Record{}
+	record.Level = slog.LevelInfo
+	record.Message = "versioned"
+	record.AddAttrs(slog.String("action", "deploy"))
+
+	_ = h2.Handle(context.Background(), record)
+
+	entry := cl.lastEntry()
+	if !argsContain(entry.Args, "app.version", "1.0") {
+		t.Errorf("expected app.version=1.0, got %v", entry.Args)
+	}
+	if !argsContain(entry.Args, "app.action", "deploy") {
+		t.Errorf("expected app.action=deploy, got %v", entry.Args)
+	}
+}
+
+func TestLevelMapping(t *testing.T) {
+	tests := []struct {
+		slogLevel slog.Level
+		cbLevel   loggers.Level
+	}{
+		{slog.LevelDebug, loggers.DebugLevel},
+		{slog.LevelInfo, loggers.InfoLevel},
+		{slog.LevelWarn, loggers.WarnLevel},
+		{slog.LevelError, loggers.ErrorLevel},
+	}
+
+	for _, tt := range tests {
+		got := fromSlogLevel(tt.slogLevel)
+		if got != tt.cbLevel {
+			t.Errorf("fromSlogLevel(%v) = %v, want %v", tt.slogLevel, got, tt.cbLevel)
+		}
+	}
+}
+
+func TestLevelMappingNonStandard(t *testing.T) {
+	// Levels between standard values should map to the lower bucket.
+	if fromSlogLevel(slog.LevelInfo+2) != loggers.InfoLevel {
+		t.Error("expected Info+2 to map to InfoLevel")
+	}
+	if fromSlogLevel(slog.LevelDebug-4) != loggers.DebugLevel {
+		t.Error("expected Debug-4 to map to DebugLevel")
+	}
+}
+
+func TestReentryGuard(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	// Simulate re-entry by setting the sentinel key.
+	ctx := context.WithValue(context.Background(), slogBridgeKey{}, true)
+
+	record := slog.Record{}
+	record.Level = slog.LevelInfo
+	record.Message = "should be dropped"
+
+	err := h.Handle(ctx, record)
+	if err != nil {
+		t.Fatalf("Handle returned error: %v", err)
+	}
+
+	if cl.count() > 0 {
+		t.Error("expected no log entries with re-entry guard")
+	}
+}
+
+func TestGroupAttrFlattening(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	record := slog.Record{}
+	record.Level = slog.LevelInfo
+	record.Message = "group attr"
+	record.AddAttrs(slog.Group("server",
+		slog.String("host", "localhost"),
+		slog.Int("port", 8080),
+	))
+
+	_ = h.Handle(context.Background(), record)
+
+	entry := cl.lastEntry()
+
+	// Find the args as strings.
+	var pairs []string
+	for i := 0; i < len(entry.Args)-1; i += 2 {
+		k, _ := entry.Args[i].(string)
+		pairs = append(pairs, k)
+	}
+
+	found := false
+	for _, p := range pairs {
+		if strings.HasPrefix(p, "server.") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected server.* prefixed keys, got pairs: %v", pairs)
+	}
+}
+
+func TestNilContext(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	record := slog.Record{}
+	record.Level = slog.LevelInfo
+	record.Message = "nil ctx"
+
+	// Should not panic.
+	err := h.Handle(nil, record) //nolint:staticcheck // testing nil context handling
+	if err != nil {
+		t.Fatalf("Handle returned error: %v", err)
+	}
+	if cl.count() == 0 {
+		t.Error("expected log entry with nil context")
+	}
+}
+
+func TestImmutability(t *testing.T) {
+	_, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	h1 := h.WithAttrs([]slog.Attr{slog.String("a", "1")})
+	h2 := h.WithAttrs([]slog.Attr{slog.String("b", "2")})
+
+	// h1 and h2 should be independent.
+	sh1 := h1.(*slogHandler)
+	sh2 := h2.(*slogHandler)
+
+	if len(sh1.attrs) != 1 || sh1.attrs[0].Key != "a" {
+		t.Errorf("h1 attrs corrupted: %v", sh1.attrs)
+	}
+	if len(sh2.attrs) != 1 || sh2.attrs[0].Key != "b" {
+		t.Errorf("h2 attrs corrupted: %v", sh2.attrs)
+	}
+}

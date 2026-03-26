@@ -185,6 +185,13 @@ func WithCallerFieldName(name string) Option {
 	}
 }
 
+// WithLevel sets the log level
+func WithLevel(level Level) Option {
+	return func(o *Options) {
+		o.Level = level
+	}
+}
+
 // FetchCallerInfo fetches function name, file name and line number from stack
 // skip is the number of stack frames to ascend, with 0 identifying the caller of FetchCallerInfo.
 // depth is the depth of file to use in caller info

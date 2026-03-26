@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/go-coldbrew/log/loggers"
-	"github.com/go-coldbrew/log/loggers/gokit"
+	cbslog "github.com/go-coldbrew/log/loggers/slog"
 )
 
 var defaultLogger atomic.Pointer[Logger]
@@ -52,7 +52,7 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 }
 
 // NewLogger creates a new logger with a provided BaseLogger
-// The default logger is gokit logger
+// The default logger is slog logger
 func NewLogger(log loggers.BaseLogger) Logger {
 	l := new(logger)
 	l.baseLog = log
@@ -60,13 +60,13 @@ func NewLogger(log loggers.BaseLogger) Logger {
 }
 
 // GetLogger returns the global logger
-// If the global logger is not set, it will create a new one with gokit logger
+// If the global logger is not set, it will create a new one with slog logger
 func GetLogger() Logger {
 	l := defaultLogger.Load()
 	if l == nil {
-		// If the default logger is not set, create a new one with gokit logger
-		gokitLogger := gokit.NewLogger()
-		newLogger := NewLogger(gokitLogger)
+		// If the default logger is not set, create a new one with slog logger
+		slogLogger := cbslog.NewLogger()
+		newLogger := NewLogger(slogLogger)
 		defaultLogger.CompareAndSwap(nil, &newLogger)
 	}
 	return *defaultLogger.Load()

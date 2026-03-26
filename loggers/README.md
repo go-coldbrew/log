@@ -34,6 +34,7 @@ Package loggers provides loggers implementation for log package
   - [func WithCallerFileDepth\(depth int\) Option](<#WithCallerFileDepth>)
   - [func WithCallerInfo\(callerInfo bool\) Option](<#WithCallerInfo>)
   - [func WithJSONLogs\(json bool\) Option](<#WithJSONLogs>)
+  - [func WithLevel\(level Level\) Option](<#WithLevel>)
   - [func WithLevelFieldName\(name string\) Option](<#WithLevelFieldName>)
   - [func WithReplaceStdLogger\(replaceStdLogger bool\) Option](<#WithReplaceStdLogger>)
   - [func WithTimestampFieldName\(name string\) Option](<#WithTimestampFieldName>)
@@ -130,7 +131,7 @@ func main() {
 </details>
 
 <a name="FetchCallerInfo"></a>
-## func [FetchCallerInfo](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L191>)
+## func [FetchCallerInfo](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L198>)
 
 ```go
 func FetchCallerInfo(skip int, depth int) (function string, file string, line int)
@@ -269,6 +270,15 @@ func WithJSONLogs(json bool) Option
 ```
 
 WithJSONLogs enables/disables json logs
+
+<a name="WithLevel"></a>
+### func [WithLevel](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L189>)
+
+```go
+func WithLevel(level Level) Option
+```
+
+WithLevel sets the log level
 
 <a name="WithLevelFieldName"></a>
 ### func [WithLevelFieldName](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L154>)
