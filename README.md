@@ -53,6 +53,7 @@ this package is based on https://github.com/carousell/Orion/tree/master/utils/lo
 
 ## Index
 
+- [Constants](<#constants>)
 - [func AddToContext\(ctx context.Context, key string, value any\) context.Context](<#AddToContext>)
 - [func Debug\(ctx context.Context, args ...any\)](<#Debug>)
 - [func Error\(ctx context.Context, args ...any\)](<#Error>)
@@ -68,8 +69,16 @@ this package is based on https://github.com/carousell/Orion/tree/master/utils/lo
   - [func NewLogger\(log loggers.BaseLogger\) Logger](<#NewLogger>)
 
 
+## Constants
+
+<a name="SupportPackageIsVersion1"></a>SupportPackageIsVersion1 is a compile\-time assertion constant. Downstream packages reference this to enforce version compatibility.
+
+```go
+const SupportPackageIsVersion1 = true
+```
+
 <a name="AddToContext"></a>
-## func [AddToContext](<https://github.com/go-coldbrew/log/blob/main/log.go#L86>)
+## func [AddToContext](<https://github.com/go-coldbrew/log/blob/main/log.go#L90>)
 
 ```go
 func AddToContext(ctx context.Context, key string, value any) context.Context
@@ -158,7 +167,7 @@ func GetLevel() loggers.Level
 GetLevel returns the current log level This is useful for checking if a log level is enabled
 
 <a name="GetOverridenLogLevel"></a>
-## func [GetOverridenLogLevel](<https://github.com/go-coldbrew/log/blob/main/options.go#L23>)
+## func [GetOverridenLogLevel](<https://github.com/go-coldbrew/log/blob/main/options.go#L26>)
 
 ```go
 func GetOverridenLogLevel(ctx context.Context) (loggers.Level, bool)
@@ -199,7 +208,7 @@ func main() {
 </details>
 
 <a name="OverrideLogLevel"></a>
-## func [OverrideLogLevel](<https://github.com/go-coldbrew/log/blob/main/options.go#L16>)
+## func [OverrideLogLevel](<https://github.com/go-coldbrew/log/blob/main/options.go#L19>)
 
 ```go
 func OverrideLogLevel(ctx context.Context, level loggers.Level) context.Context
@@ -217,7 +226,7 @@ func SetLevel(level loggers.Level)
 SetLevel sets the log level to filter logs
 
 <a name="SetLogger"></a>
-## func [SetLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L76>)
+## func [SetLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L80>)
 
 ```go
 func SetLogger(l Logger)
@@ -258,7 +267,7 @@ type Logger interface {
 ```
 
 <a name="GetLogger"></a>
-### func [GetLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L64>)
+### func [GetLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L68>)
 
 ```go
 func GetLogger() Logger
@@ -267,7 +276,7 @@ func GetLogger() Logger
 GetLogger returns the global logger If the global logger is not set, it will create a new one with slog logger
 
 <a name="NewLogger"></a>
-### func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L56>)
+### func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L60>)
 
 ```go
 func NewLogger(log loggers.BaseLogger) Logger

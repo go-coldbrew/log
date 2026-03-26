@@ -32,7 +32,7 @@ func ToGoKitLogger(l log.Logger) basegokit.Logger
 ToGoKitLogger wraps a log.Logger to gokit/log.Logger
 
 <a name="ToSlogHandler"></a>
-## func [ToSlogHandler](<https://github.com/go-coldbrew/log/blob/main/wrap/slogwrap.go#L91>)
+## func [ToSlogHandler](<https://github.com/go-coldbrew/log/blob/main/wrap/slogwrap.go#L100>)
 
 ```go
 func ToSlogHandler(l log.Logger) slog.Handler
@@ -41,7 +41,7 @@ func ToSlogHandler(l log.Logger) slog.Handler
 ToSlogHandler wraps a ColdBrew log.Logger as an slog.Handler.
 
 <a name="ToSlogLogger"></a>
-## func [ToSlogLogger](<https://github.com/go-coldbrew/log/blob/main/wrap/slogwrap.go#L96>)
+## func [ToSlogLogger](<https://github.com/go-coldbrew/log/blob/main/wrap/slogwrap.go#L105>)
 
 ```go
 func ToSlogLogger(l log.Logger) *slog.Logger

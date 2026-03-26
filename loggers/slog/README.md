@@ -22,7 +22,7 @@ Package slog provides a BaseLogger implementation for log/slog.
 
 
 <a name="NewLogger"></a>
-## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/slog/slog.go#L137>)
+## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/slog/slog.go#L152>)
 
 ```go
 func NewLogger(options ...loggers.Option) loggers.BaseLogger
@@ -31,7 +31,7 @@ func NewLogger(options ...loggers.Option) loggers.BaseLogger
 NewLogger returns a BaseLogger implementation backed by log/slog.
 
 <a name="NewLoggerWithHandler"></a>
-## func [NewLoggerWithHandler](<https://github.com/go-coldbrew/log/blob/main/loggers/slog/slog.go#L188>)
+## func [NewLoggerWithHandler](<https://github.com/go-coldbrew/log/blob/main/loggers/slog/slog.go#L203>)
 
 ```go
 func NewLoggerWithHandler(handler slog.Handler, options ...loggers.Option) loggers.BaseLogger

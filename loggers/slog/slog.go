@@ -29,20 +29,13 @@ func stringKey(v any) string {
 	return fmt.Sprint(v)
 }
 
-// toAttr creates an slog.Attr, using fmt.Stringer for types that slog would
-// serialize differently than gokit (e.g., time.Duration becomes "1s" not 1000000000).
+// toAttr creates an slog.Attr, handling time.Duration specially since slog
+// serializes it as nanoseconds (int64) while gokit uses fmt.Sprint ("1s").
 func toAttr(key string, val any) slog.Attr {
-	switch val.(type) {
-	case string, bool, int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64,
-		float32, float64:
-		return slog.Any(key, val)
-	default:
-		if s, ok := val.(fmt.Stringer); ok {
-			return slog.String(key, s.String())
-		}
-		return slog.Any(key, val)
+	if d, ok := val.(time.Duration); ok {
+		return slog.String(key, d.String())
 	}
+	return slog.Any(key, val)
 }
 
 func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...any) {
