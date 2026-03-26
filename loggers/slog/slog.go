@@ -41,6 +41,12 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 
 	slogLevel := toSlogLevel(level)
 
+	// Gate on our own levelVar first (handles SetLevel on custom handlers
+	// whose internal level may not be wired to our levelVar).
+	if slogLevel < l.levelVar.Level() {
+		return
+	}
+
 	if !l.handler.Enabled(ctx, slogLevel) {
 		return
 	}

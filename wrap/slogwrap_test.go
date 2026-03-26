@@ -2,6 +2,7 @@ package wrap
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -55,8 +56,7 @@ func newCaptureLogger(level loggers.Level) (*captureLogger, log.Logger) {
 func argsContain(args []any, key, value string) bool {
 	for i := 0; i < len(args)-1; i += 2 {
 		k, _ := args[i].(string)
-		v, _ := args[i+1].(string)
-		if k == key && v == value {
+		if k == key && fmt.Sprint(args[i+1]) == value {
 			return true
 		}
 	}
@@ -321,20 +321,77 @@ func TestNilContext(t *testing.T) {
 }
 
 func TestImmutability(t *testing.T) {
-	_, l := newCaptureLogger(loggers.DebugLevel)
+	cl, l := newCaptureLogger(loggers.DebugLevel)
 	h := ToSlogHandler(l)
 
 	h1 := h.WithAttrs([]slog.Attr{slog.String("a", "1")})
 	h2 := h.WithAttrs([]slog.Attr{slog.String("b", "2")})
 
-	// h1 and h2 should be independent.
-	sh1 := h1.(*slogHandler)
-	sh2 := h2.(*slogHandler)
+	// h1 and h2 should be independent — log from each and check.
+	var r slog.Record
+	r.Level = slog.LevelInfo
+	r.Message = "h1"
+	_ = h1.Handle(context.Background(), r)
+	e1 := cl.lastEntry()
 
-	if len(sh1.attrs) != 1 || sh1.attrs[0].Key != "a" {
-		t.Errorf("h1 attrs corrupted: %v", sh1.attrs)
+	r.Message = "h2"
+	_ = h2.Handle(context.Background(), r)
+	e2 := cl.lastEntry()
+
+	if !argsContain(e1.Args, "a", "1") || argsContain(e1.Args, "b", "2") {
+		t.Errorf("h1 should have a=1 only, got %v", e1.Args)
 	}
-	if len(sh2.attrs) != 1 || sh2.attrs[0].Key != "b" {
-		t.Errorf("h2 attrs corrupted: %v", sh2.attrs)
+	if !argsContain(e2.Args, "b", "2") || argsContain(e2.Args, "a", "1") {
+		t.Errorf("h2 should have b=2 only, got %v", e2.Args)
+	}
+}
+
+// Regression: attrs added before WithGroup must NOT be prefixed by that group.
+func TestWithAttrsThenWithGroup(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	// Add attr first, then group — "service" should stay at top level.
+	h2 := h.WithAttrs([]slog.Attr{slog.String("service", "api")}).WithGroup("req")
+
+	var r slog.Record
+	r.Level = slog.LevelInfo
+	r.Message = "test"
+	r.AddAttrs(slog.String("id", "123"))
+	_ = h2.Handle(context.Background(), r)
+
+	entry := cl.lastEntry()
+	// "service" was added before the group — must NOT be prefixed.
+	if !argsContain(entry.Args, "service", "api") {
+		t.Errorf("expected top-level service=api, got %v", entry.Args)
+	}
+	if argsContain(entry.Args, "req.service", "api") {
+		t.Errorf("service should NOT be prefixed with req., got %v", entry.Args)
+	}
+	// "id" is a record attr — should be prefixed with the group.
+	if !argsContain(entry.Args, "req.id", "123") {
+		t.Errorf("expected req.id=123, got %v", entry.Args)
+	}
+}
+
+func TestWithGroupThenWithAttrs(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	// Group first, then attr — "version" should be prefixed.
+	h2 := h.WithGroup("app").WithAttrs([]slog.Attr{slog.String("version", "2.0")})
+
+	var r slog.Record
+	r.Level = slog.LevelInfo
+	r.Message = "test"
+	r.AddAttrs(slog.String("action", "deploy"))
+	_ = h2.Handle(context.Background(), r)
+
+	entry := cl.lastEntry()
+	if !argsContain(entry.Args, "app.version", "2.0") {
+		t.Errorf("expected app.version=2.0, got %v", entry.Args)
+	}
+	if !argsContain(entry.Args, "app.action", "deploy") {
+		t.Errorf("expected app.action=deploy, got %v", entry.Args)
 	}
 }

@@ -17,10 +17,13 @@ type slogBridgeKey struct{}
 // a ColdBrew log.Logger. This allows third-party code and new code
 // using slog natively to flow through ColdBrew's logging pipeline.
 type slogHandler struct {
-	l           log.Logger
-	attrs       []slog.Attr
-	groups      []string
-	groupPrefix string // cached strings.Join(groups, ".") + "."
+	l log.Logger
+	// preformatted holds key-value pairs from WithAttrs, already resolved
+	// with the groupPrefix that was active at the time WithAttrs was called.
+	// This ensures attrs are not retroactively re-prefixed by later WithGroup calls.
+	preformatted []any
+	groups       []string
+	groupPrefix  string // cached strings.Join(groups, ".") + "."
 }
 
 // Enabled reports whether the handler handles records at the given level.
@@ -46,13 +49,13 @@ func (h *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 
 	cbLevel := fromSlogLevel(record.Level)
 
-	args := make([]any, 0, 2+len(h.attrs)*2+record.NumAttrs()*2)
+	args := make([]any, 0, 2+len(h.preformatted)+record.NumAttrs()*2)
 	args = append(args, "msg", record.Message)
 
-	for _, a := range h.attrs {
-		args = appendAttr(args, h.groupPrefix, a)
-	}
+	// Append pre-resolved attrs (keys already include their frozen group prefix).
+	args = append(args, h.preformatted...)
 
+	// Append record attrs with the current group prefix.
 	record.Attrs(func(a slog.Attr) bool {
 		args = appendAttr(args, h.groupPrefix, a)
 		return true
@@ -66,10 +69,16 @@ func (h *slogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	if len(attrs) == 0 {
 		return h
 	}
-	newAttrs := make([]slog.Attr, len(h.attrs), len(h.attrs)+len(attrs))
-	copy(newAttrs, h.attrs)
-	newAttrs = append(newAttrs, attrs...)
-	return &slogHandler{l: h.l, attrs: newAttrs, groups: h.groups, groupPrefix: h.groupPrefix}
+	// Pre-resolve attrs with the current groupPrefix so they're frozen
+	// and won't be affected by future WithGroup calls.
+	var resolved []any
+	for _, a := range attrs {
+		resolved = appendAttr(resolved, h.groupPrefix, a)
+	}
+	newPreformatted := make([]any, len(h.preformatted), len(h.preformatted)+len(resolved))
+	copy(newPreformatted, h.preformatted)
+	newPreformatted = append(newPreformatted, resolved...)
+	return &slogHandler{l: h.l, preformatted: newPreformatted, groups: h.groups, groupPrefix: h.groupPrefix}
 }
 
 func (h *slogHandler) WithGroup(name string) slog.Handler {
@@ -80,10 +89,10 @@ func (h *slogHandler) WithGroup(name string) slog.Handler {
 	copy(newGroups, h.groups)
 	newGroups = append(newGroups, name)
 	return &slogHandler{
-		l:           h.l,
-		attrs:       h.attrs,
-		groups:      newGroups,
-		groupPrefix: strings.Join(newGroups, ".") + ".",
+		l:            h.l,
+		preformatted: h.preformatted,
+		groups:       newGroups,
+		groupPrefix:  strings.Join(newGroups, ".") + ".",
 	}
 }
 
