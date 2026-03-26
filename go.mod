@@ -3,7 +3,7 @@ module github.com/go-coldbrew/log
 go 1.25.8
 
 require (
-	github.com/go-coldbrew/options v0.2.4
+	github.com/go-coldbrew/options v0.2.6
 	github.com/go-kit/log v0.2.1
 	github.com/sirupsen/logrus v1.9.4
 	go.uber.org/zap v1.27.1
@@ -62,7 +62,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.8 // indirect
 	github.com/ckaznocha/intrange v0.3.1 // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/curioswitch/go-reassign v0.3.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/daixiang0/gci v0.13.7 // indirect
