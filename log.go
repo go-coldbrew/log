@@ -8,6 +8,10 @@ import (
 	cbslog "github.com/go-coldbrew/log/loggers/slog"
 )
 
+// SupportPackageIsVersion1 is a compile-time assertion constant.
+// Downstream packages reference this to enforce version compatibility.
+const SupportPackageIsVersion1 = true
+
 var defaultLogger atomic.Pointer[Logger]
 
 type logger struct {
