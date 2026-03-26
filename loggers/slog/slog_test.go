@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-coldbrew/log/loggers"
 )
@@ -373,6 +374,27 @@ func TestWireCompatibility_CustomTimestampKey(t *testing.T) {
 
 	if _, ok := m["ts"]; !ok {
 		t.Errorf("expected 'ts' key, got keys: %v", keys(m))
+	}
+}
+
+func TestDurationFormatting(t *testing.T) {
+	var buf bytes.Buffer
+	l := newBufferedLogger(&buf, nil, loggers.WithJSONLogs(true), loggers.WithCallerInfo(false))
+
+	l.Log(context.Background(), loggers.InfoLevel, 1, "msg", "test", "took", time.Second)
+
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatalf("failed to parse JSON: %v\nraw: %s", err, buf.String())
+	}
+
+	// time.Duration should be formatted as "1s" (matching gokit), not 1000000000.
+	took, ok := m["took"].(string)
+	if !ok {
+		t.Fatalf("expected 'took' to be a string, got %T: %v", m["took"], m["took"])
+	}
+	if took != "1s" {
+		t.Errorf("expected took=1s, got %s", took)
 	}
 }
 

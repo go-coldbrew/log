@@ -29,6 +29,22 @@ func stringKey(v any) string {
 	return fmt.Sprint(v)
 }
 
+// toAttr creates an slog.Attr, using fmt.Stringer for types that slog would
+// serialize differently than gokit (e.g., time.Duration becomes "1s" not 1000000000).
+func toAttr(key string, val any) slog.Attr {
+	switch val.(type) {
+	case string, bool, int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64,
+		float32, float64:
+		return slog.Any(key, val)
+	default:
+		if s, ok := val.(fmt.Stringer); ok {
+			return slog.String(key, s.String())
+		}
+		return slog.Any(key, val)
+	}
+}
+
 func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...any) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -83,13 +99,13 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
 		ctxFields.Range(func(k, v any) bool {
-			attrs = append(attrs, slog.Any(stringKey(k), v))
+			attrs = append(attrs, toAttr(stringKey(k), v))
 			return true
 		})
 	}
 
 	for i := 0; i < len(kvArgs)-1; i += 2 {
-		attrs = append(attrs, slog.Any(stringKey(kvArgs[i]), kvArgs[i+1]))
+		attrs = append(attrs, toAttr(stringKey(kvArgs[i]), kvArgs[i+1]))
 	}
 	if len(kvArgs)%2 != 0 {
 		attrs = append(attrs, slog.Any("!BADKEY", kvArgs[len(kvArgs)-1]))
