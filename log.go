@@ -8,6 +8,10 @@ import (
 	"github.com/go-coldbrew/log/loggers/gokit"
 )
 
+// SupportPackageIsVersion1 is a compile-time assertion constant.
+// Downstream packages reference this to enforce version compatibility.
+const SupportPackageIsVersion1 = true
+
 var defaultLogger atomic.Pointer[Logger]
 
 type logger struct {

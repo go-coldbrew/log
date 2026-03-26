@@ -7,6 +7,9 @@ import (
 	"github.com/go-coldbrew/options"
 )
 
+// Compile-time version compatibility check.
+var _ = options.SupportPackageIsVersion1
+
 const logLevelKey = "OverrideLogLevel"
 
 // OverrideLogLevel allows the default log level to be overridden from request context
