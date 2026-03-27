@@ -40,7 +40,7 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 
 	lgr := log.With(l.logger, extra...)
 	if len(args) == 1 {
-		_ = lgr.Log("msg", args[0])
+		_ = lgr.Log(loggers.MessageKey, args[0])
 	} else {
 		_ = lgr.Log(args...)
 	}
@@ -56,10 +56,7 @@ func (l *logger) GetLevel() loggers.Level {
 
 // NewLogger returns a base logger impl for go-kit log
 func NewLogger(options ...loggers.Option) loggers.BaseLogger {
-	// default options
 	opt := loggers.GetDefaultOptions()
-
-	// read options
 	for _, f := range options {
 		f(&opt)
 	}
@@ -67,7 +64,6 @@ func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 	l := logger{}
 	writer := log.NewSyncWriter(os.Stdout)
 
-	// check for json or logfmt
 	if opt.JSONLogs {
 		l.logger = log.NewJSONLogger(writer)
 	} else {

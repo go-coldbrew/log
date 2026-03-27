@@ -54,7 +54,7 @@ func main() {
 
 
 <a name="NewLogger"></a>
-## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/gokit/gokit.go#L54>)
+## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/gokit/gokit.go#L58>)
 
 ```go
 func NewLogger(options ...loggers.Option) loggers.BaseLogger

@@ -55,7 +55,7 @@ func (h *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 	cbLevel := fromSlogLevel(record.Level)
 
 	args := make([]any, 0, 2+len(h.preformatted)+record.NumAttrs()*2)
-	args = append(args, "msg", record.Message)
+	args = append(args, loggers.MessageKey, record.Message)
 
 	// Append pre-resolved attrs (keys already include their frozen group prefix).
 	args = append(args, h.preformatted...)

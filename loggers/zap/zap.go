@@ -75,7 +75,6 @@ func toZapLevel(level loggers.Level) zapcore.Level {
 func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 
 	opt := loggers.GetDefaultOptions()
-	// read options
 	for _, f := range options {
 		f(&opt)
 	}
@@ -105,13 +104,10 @@ func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 		zapCfg.Encoding = "console"
 	}
 	l, err := zapCfg.Build()
-
-	l = l.WithOptions(zap.AddCallerSkip(COLBREW_CALL_STACK_SIZE))
 	if err != nil {
-		//should we fail? will use sugared log here
 		l, _ = zap.NewProduction()
-
 	}
+	l = l.WithOptions(zap.AddCallerSkip(COLBREW_CALL_STACK_SIZE))
 
 	return &logger{
 		logger: l.Sugar(),

@@ -69,7 +69,7 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		msg = stringKey(args[0])
 	} else if len(args) > 1 {
 		for i := 0; i < len(args)-1; i += 2 {
-			if k, ok := args[i].(string); ok && k == "msg" {
+			if k, ok := args[i].(string); ok && k == loggers.MessageKey {
 				msg = stringKey(args[i+1])
 				msgIdx = i
 				break
