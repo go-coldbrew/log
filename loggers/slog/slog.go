@@ -42,11 +42,6 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	// Re-entry guard: prevent infinite loops with the slog handler bridge.
-	if ctx.Value(slogBackendKey{}) != nil {
-		return
-	}
-	ctx = context.WithValue(ctx, slogBackendKey{}, true)
 
 	slogLevel := toSlogLevel(level)
 
@@ -60,31 +55,31 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		return
 	}
 
+	// Re-entry guard: prevent infinite loops with the slog handler bridge.
+	// Placed after level checks to avoid context allocation on filtered messages.
+	if ctx.Value(slogBackendKey{}) != nil {
+		return
+	}
+	ctx = context.WithValue(ctx, slogBackendKey{}, true)
+
+	// Extract "msg" from args and build attrs directly — no intermediate slice.
 	var msg string
-	kvArgs := make([]any, 0, len(args))
-	msgFound := false
+	msgIdx := -1
 	if len(args) == 1 {
 		msg = stringKey(args[0])
 	} else if len(args) > 1 {
 		for i := 0; i < len(args)-1; i += 2 {
 			if k, ok := args[i].(string); ok && k == "msg" {
 				msg = stringKey(args[i+1])
-				kvArgs = append(kvArgs, args[:i]...)
-				kvArgs = append(kvArgs, args[i+2:]...)
-				msgFound = true
+				msgIdx = i
 				break
 			}
 		}
-		if !msgFound {
-			kvArgs = args
-		}
 	}
 
-	attrCap := len(kvArgs)/2 + 1
-	if l.opt.CallerInfo {
-		attrCap++
-	}
-	attrs := make([]slog.Attr, 0, attrCap)
+	// Stack-allocated buffer avoids heap allocation for <=8 attrs (common case).
+	var attrBuf [8]slog.Attr
+	attrs := attrBuf[:0]
 
 	if l.opt.CallerInfo {
 		_, file, line := loggers.FetchCallerInfo(skip+1, l.opt.CallerFileDepth)
@@ -99,11 +94,15 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		})
 	}
 
-	for i := 0; i < len(kvArgs)-1; i += 2 {
-		attrs = append(attrs, toAttr(stringKey(kvArgs[i]), kvArgs[i+1]))
+	// Build attrs directly from args, skipping the "msg" pair.
+	for i := 0; i < len(args)-1; i += 2 {
+		if i == msgIdx {
+			continue
+		}
+		attrs = append(attrs, toAttr(stringKey(args[i]), args[i+1]))
 	}
-	if len(kvArgs)%2 != 0 {
-		attrs = append(attrs, slog.Any("!BADKEY", kvArgs[len(kvArgs)-1]))
+	if len(args) > 1 && len(args)%2 != 0 {
+		attrs = append(attrs, slog.Any("!BADKEY", args[len(args)-1]))
 	}
 
 	var pcs [1]uintptr

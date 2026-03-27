@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
@@ -398,6 +399,58 @@ func TestDurationFormatting(t *testing.T) {
 	}
 	if took != "1s" {
 		t.Errorf("expected took=1s, got %s", took)
+	}
+}
+
+// TestManyAttrsSpillsFromStackBuffer verifies that logging >8 attrs
+// (which exceeds the [8]slog.Attr stack buffer) produces correct output.
+func TestManyAttrsSpillsFromStackBuffer(t *testing.T) {
+	var buf bytes.Buffer
+	l := newBufferedLogger(&buf, nil, loggers.WithJSONLogs(true), loggers.WithCallerInfo(false))
+
+	args := []any{"msg", "many attrs"}
+	for i := 0; i < 12; i++ {
+		args = append(args, fmt.Sprintf("key%d", i), fmt.Sprintf("val%d", i))
+	}
+
+	l.Log(context.Background(), loggers.InfoLevel, 1, args...)
+
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatalf("failed to parse JSON: %v\nraw: %s", err, buf.String())
+	}
+
+	for i := 0; i < 12; i++ {
+		key := fmt.Sprintf("key%d", i)
+		expected := fmt.Sprintf("val%d", i)
+		if m[key] != expected {
+			t.Errorf("expected %s=%s, got %v", key, expected, m[key])
+		}
+	}
+}
+
+// TestMsgNotFirstKVPair verifies that when "msg" is not the first key-value pair,
+// the preceding pairs are still included in the output.
+func TestMsgNotFirstKVPair(t *testing.T) {
+	var buf bytes.Buffer
+	l := newBufferedLogger(&buf, nil, loggers.WithJSONLogs(true), loggers.WithCallerInfo(false))
+
+	// "msg" is the second kv pair — "before" should still appear.
+	l.Log(context.Background(), loggers.InfoLevel, 1, "before", "yes", "msg", "hello", "after", "also")
+
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatalf("failed to parse JSON: %v\nraw: %s", err, buf.String())
+	}
+
+	if m["msg"] != "hello" {
+		t.Errorf("expected msg=hello, got %v", m["msg"])
+	}
+	if m["before"] != "yes" {
+		t.Errorf("expected before=yes, got %v", m["before"])
+	}
+	if m["after"] != "also" {
+		t.Errorf("expected after=also, got %v", m["after"])
 	}
 }
 

@@ -47,10 +47,13 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		ctx = context.Background()
 	}
 	logLevel := l.GetLevel()
-	if overridenLogLevel, found := GetOverridenLogLevel(ctx); found {
-		logLevel = overridenLogLevel
-	}
 	if logLevel >= level {
+		l.baseLog.Log(ctx, level, skip+1, args...)
+		return
+	}
+	// Only check override if base level would filter this out.
+	// Most requests have no override, so this avoids a context lookup on the hot path.
+	if overridenLogLevel, found := GetOverridenLogLevel(ctx); found && overridenLogLevel >= level {
 		l.baseLog.Log(ctx, level, skip+1, args...)
 	}
 }
