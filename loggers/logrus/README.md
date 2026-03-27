@@ -13,7 +13,7 @@
 import "github.com/go-coldbrew/log/loggers/logrus"
 ```
 
-Package logrus provides a BaseLogger implementation for logrus
+Deprecated: Package logrus provides a BaseLogger implementation for logrus. The logrus library has been in maintenance mode since 2020 and is no longer actively developed. Use the slog backend \(loggers/slog\) instead, which is the default and recommended backend.
 
 ## Index
 
@@ -21,7 +21,7 @@ Package logrus provides a BaseLogger implementation for logrus
 
 
 <a name="NewLogger"></a>
-## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/logrus/logrus.go#L88>)
+## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/logrus/logrus.go#L90>)
 
 ```go
 func NewLogger(options ...loggers.Option) loggers.BaseLogger

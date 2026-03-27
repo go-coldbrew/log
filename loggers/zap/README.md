@@ -15,6 +15,37 @@ import "github.com/go-coldbrew/log/loggers/zap"
 
 Package zap provides a BaseLogger implementation for uber/zap
 
+<details><summary>Example</summary>
+<p>
+
+This example shows how to use the zap backend with JSON output.
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/go-coldbrew/log"
+	"github.com/go-coldbrew/log/loggers"
+	"github.com/go-coldbrew/log/loggers/zap"
+)
+
+func main() {
+	logger := zap.NewLogger(
+		loggers.WithJSONLogs(true),
+		loggers.WithCallerInfo(true),
+	)
+	log.SetLogger(log.NewLogger(logger))
+
+	ctx := context.Background()
+	log.Info(ctx, "msg", "request handled", "method", "POST", "latency_ms", 12)
+}
+```
+
+</p>
+</details>
+
 ## Index
 
 - [Constants](<#constants>)
@@ -30,7 +61,7 @@ const COLBREW_CALL_STACK_SIZE = 3
 ```
 
 <a name="NewLogger"></a>
-## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/zap/zap.go#L77>)
+## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/zap/zap.go#L75>)
 
 ```go
 func NewLogger(options ...loggers.Option) loggers.BaseLogger

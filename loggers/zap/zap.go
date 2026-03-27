@@ -3,6 +3,7 @@ package zap
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-coldbrew/log/loggers"
 	"go.uber.org/zap"
@@ -20,33 +21,30 @@ const COLBREW_CALL_STACK_SIZE = 3
 
 func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...any) {
 
-	logger := l.logger
-	var msg any
-	//if there are odd number of elements in args, first will be treated as a message and rest will
-	//be key value pair to log in json format
+	var msg string
+	// If there are odd number of elements in args, first will be treated as a message and rest will
+	// be key value pair to log in json format.
 	if len(args)%2 != 0 {
-		msg = args[0]
+		msg = fmt.Sprint(args[0])
 		args = args[1:]
 	}
-	logger = logger.With(args...)
-
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
-		ctxFields.Range(func(k, v any) bool { logger = logger.With(k, v); return true })
+		ctxFields.Range(func(k, v any) bool { args = append(args, k, v); return true })
 	}
 
-	logFunc := l.logger.Error
+	// Use structured-logging variants (Infow, Debugw, etc.) to pass fields inline
+	// instead of logger.With() which creates a new SugaredLogger wrapper per call.
 	switch level {
 	case loggers.DebugLevel:
-		logFunc = logger.Debug
+		l.logger.Debugw(msg, args...)
 	case loggers.InfoLevel:
-		logFunc = logger.Info
+		l.logger.Infow(msg, args...)
 	case loggers.WarnLevel:
-		logFunc = logger.Warn
-	case loggers.ErrorLevel:
-		logFunc = logger.Error
+		l.logger.Warnw(msg, args...)
+	default:
+		l.logger.Errorw(msg, args...)
 	}
-	logFunc(msg)
 }
 
 func (l *logger) GetLevel() loggers.Level {
@@ -77,7 +75,6 @@ func toZapLevel(level loggers.Level) zapcore.Level {
 func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 
 	opt := loggers.GetDefaultOptions()
-	// read options
 	for _, f := range options {
 		f(&opt)
 	}
@@ -107,13 +104,10 @@ func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 		zapCfg.Encoding = "console"
 	}
 	l, err := zapCfg.Build()
-
-	l = l.WithOptions(zap.AddCallerSkip(COLBREW_CALL_STACK_SIZE))
 	if err != nil {
-		//should we fail? will use sugared log here
 		l, _ = zap.NewProduction()
-
 	}
+	l = l.WithOptions(zap.AddCallerSkip(COLBREW_CALL_STACK_SIZE))
 
 	return &logger{
 		logger: l.Sugar(),

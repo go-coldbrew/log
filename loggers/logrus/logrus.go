@@ -1,4 +1,6 @@
-// Package logrus provides a BaseLogger implementation for logrus
+// Deprecated: Package logrus provides a BaseLogger implementation for logrus.
+// The logrus library has been in maintenance mode since 2020 and is no longer actively developed.
+// Use the slog backend (loggers/slog) instead, which is the default and recommended backend.
 package logrus
 
 import (

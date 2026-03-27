@@ -1,4 +1,6 @@
-// Package gokit provides BaseLogger implementation for go-kit/log
+// Deprecated: Package gokit provides BaseLogger implementation for go-kit/log.
+// The go-kit/log library is in maintenance mode and no longer actively developed.
+// Use the slog backend (loggers/slog) instead, which is the default and recommended backend.
 package gokit
 
 import (
@@ -18,23 +20,27 @@ type logger struct {
 }
 
 func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ...any) {
-	lgr := log.With(l.logger, l.opt.LevelFieldName, level.String())
+	// Batch all extra fields (level, caller, context) into a single slice
+	// and call log.With() once instead of N separate wrapper allocations.
+	extra := make([]any, 0, 8)
+	extra = append(extra, l.opt.LevelFieldName, level.String())
 
 	if l.opt.CallerInfo {
 		_, file, line := loggers.FetchCallerInfo(skip+1, l.opt.CallerFileDepth)
-		lgr = log.With(lgr, l.opt.CallerFieldName, fmt.Sprintf("%s:%d", file, line))
+		extra = append(extra, l.opt.CallerFieldName, fmt.Sprintf("%s:%d", file, line))
 	}
 
-	// fetch fields from context and add them to logrus fields
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
 		ctxFields.Range(func(k, v any) bool {
-			lgr = log.With(lgr, k, v)
+			extra = append(extra, k, v)
 			return true
 		})
 	}
+
+	lgr := log.With(l.logger, extra...)
 	if len(args) == 1 {
-		_ = lgr.Log("msg", args[0])
+		_ = lgr.Log(loggers.MessageKey, args[0])
 	} else {
 		_ = lgr.Log(args...)
 	}
@@ -50,10 +56,7 @@ func (l *logger) GetLevel() loggers.Level {
 
 // NewLogger returns a base logger impl for go-kit log
 func NewLogger(options ...loggers.Option) loggers.BaseLogger {
-	// default options
 	opt := loggers.GetDefaultOptions()
-
-	// read options
 	for _, f := range options {
 		f(&opt)
 	}
@@ -61,7 +64,6 @@ func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 	l := logger{}
 	writer := log.NewSyncWriter(os.Stdout)
 
-	// check for json or logfmt
 	if opt.JSONLogs {
 		l.logger = log.NewJSONLogger(writer)
 	} else {

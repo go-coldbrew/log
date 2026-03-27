@@ -53,6 +53,9 @@ var AllLevels = []Level{
 	DebugLevel,
 }
 
+// MessageKey is the conventional key used for the log message across all backends.
+const MessageKey = "msg"
+
 // These are the different logging levels. You can set the logging level to log
 // on your instance of logger, obtained with `logs.New()`.
 const (
@@ -182,6 +185,13 @@ func WithCallerFieldName(name string) Option {
 		if name != "" {
 			o.CallerFieldName = name
 		}
+	}
+}
+
+// WithLevel sets the log level
+func WithLevel(level Level) Option {
+	return func(o *Options) {
+		o.Level = level
 	}
 }
 

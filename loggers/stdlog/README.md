@@ -15,6 +15,33 @@ import "github.com/go-coldbrew/log/loggers/stdlog"
 
 Package stdlog provides a BaseLogger implementation for golang "log" package
 
+<details><summary>Example</summary>
+<p>
+
+This example shows how to use the stdlog backend. It uses Go's standard "log" package for output — simple but no structured formatting.
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/go-coldbrew/log"
+	"github.com/go-coldbrew/log/loggers/stdlog"
+)
+
+func main() {
+	logger := stdlog.NewLogger()
+	log.SetLogger(log.NewLogger(logger))
+
+	ctx := context.Background()
+	log.Info(ctx, "msg", "server started", "port", 8080)
+}
+```
+
+</p>
+</details>
+
 ## Index
 
 - [func NewLogger\(options ...loggers.Option\) loggers.BaseLogger](<#NewLogger>)

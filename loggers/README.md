@@ -34,6 +34,7 @@ Package loggers provides loggers implementation for log package
   - [func WithCallerFileDepth\(depth int\) Option](<#WithCallerFileDepth>)
   - [func WithCallerInfo\(callerInfo bool\) Option](<#WithCallerInfo>)
   - [func WithJSONLogs\(json bool\) Option](<#WithJSONLogs>)
+  - [func WithLevel\(level Level\) Option](<#WithLevel>)
   - [func WithLevelFieldName\(name string\) Option](<#WithLevelFieldName>)
   - [func WithReplaceStdLogger\(replaceStdLogger bool\) Option](<#WithReplaceStdLogger>)
   - [func WithTimestampFieldName\(name string\) Option](<#WithTimestampFieldName>)
@@ -58,6 +59,12 @@ const (
     // DebugLevel level. Usually only enabled when debugging. Very verbose logging.
     DebugLevel
 )
+```
+
+<a name="MessageKey"></a>MessageKey is the conventional key used for the log message across all backends.
+
+```go
+const MessageKey = "msg"
 ```
 
 ## Variables
@@ -130,7 +137,7 @@ func main() {
 </details>
 
 <a name="FetchCallerInfo"></a>
-## func [FetchCallerInfo](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L191>)
+## func [FetchCallerInfo](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L201>)
 
 ```go
 func FetchCallerInfo(skip int, depth int) (function string, file string, line int)
@@ -139,7 +146,7 @@ func FetchCallerInfo(skip int, depth int) (function string, file string, line in
 FetchCallerInfo fetches function name, file name and line number from stack skip is the number of stack frames to ascend, with 0 identifying the caller of FetchCallerInfo. depth is the depth of file to use in caller info
 
 <a name="BaseLogger"></a>
-## type [BaseLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L72-L85>)
+## type [BaseLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L75-L88>)
 
 BaseLogger is the interface that needs to be implemented by client loggers
 
@@ -226,7 +233,7 @@ func (o *LogFields) Del(key string)
 Del deletes a log field entry
 
 <a name="Option"></a>
-## type [Option](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L128>)
+## type [Option](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L131>)
 
 Option defines an option for BaseLogger
 
@@ -235,7 +242,7 @@ type Option func(*Options)
 ```
 
 <a name="WithCallerFieldName"></a>
-### func [WithCallerFieldName](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L179>)
+### func [WithCallerFieldName](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L182>)
 
 ```go
 func WithCallerFieldName(name string) Option
@@ -244,7 +251,7 @@ func WithCallerFieldName(name string) Option
 WithCallerFieldName sets the name of callerinfo field
 
 <a name="WithCallerFileDepth"></a>
-### func [WithCallerFileDepth](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L170>)
+### func [WithCallerFileDepth](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L173>)
 
 ```go
 func WithCallerFileDepth(depth int) Option
@@ -253,7 +260,7 @@ func WithCallerFileDepth(depth int) Option
 WithCallerFileDepth sets the depth of file to use in caller info
 
 <a name="WithCallerInfo"></a>
-### func [WithCallerInfo](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L163>)
+### func [WithCallerInfo](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L166>)
 
 ```go
 func WithCallerInfo(callerInfo bool) Option
@@ -262,7 +269,7 @@ func WithCallerInfo(callerInfo bool) Option
 WithCallerInfo enables/disables adding caller info to logs
 
 <a name="WithJSONLogs"></a>
-### func [WithJSONLogs](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L138>)
+### func [WithJSONLogs](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L141>)
 
 ```go
 func WithJSONLogs(json bool) Option
@@ -270,8 +277,17 @@ func WithJSONLogs(json bool) Option
 
 WithJSONLogs enables/disables json logs
 
+<a name="WithLevel"></a>
+### func [WithLevel](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L192>)
+
+```go
+func WithLevel(level Level) Option
+```
+
+WithLevel sets the log level
+
 <a name="WithLevelFieldName"></a>
-### func [WithLevelFieldName](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L154>)
+### func [WithLevelFieldName](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L157>)
 
 ```go
 func WithLevelFieldName(name string) Option
@@ -280,7 +296,7 @@ func WithLevelFieldName(name string) Option
 WithLevelFieldName sets the name of the level field in logs
 
 <a name="WithReplaceStdLogger"></a>
-### func [WithReplaceStdLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L131>)
+### func [WithReplaceStdLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L134>)
 
 ```go
 func WithReplaceStdLogger(replaceStdLogger bool) Option
@@ -289,7 +305,7 @@ func WithReplaceStdLogger(replaceStdLogger bool) Option
 WithReplaceStdLogger enables/disables replacing std logger
 
 <a name="WithTimestampFieldName"></a>
-### func [WithTimestampFieldName](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L145>)
+### func [WithTimestampFieldName](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L148>)
 
 ```go
 func WithTimestampFieldName(name string) Option
@@ -298,7 +314,7 @@ func WithTimestampFieldName(name string) Option
 WithTimestampFieldName sets the name of the time stamp field in logs
 
 <a name="Options"></a>
-## type [Options](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L88-L105>)
+## type [Options](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L91-L108>)
 
 Options contain all common options for BaseLoggers
 
@@ -324,7 +340,7 @@ type Options struct {
 ```
 
 <a name="GetDefaultOptions"></a>
-### func [GetDefaultOptions](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L108>)
+### func [GetDefaultOptions](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L111>)
 
 ```go
 func GetDefaultOptions() Options
