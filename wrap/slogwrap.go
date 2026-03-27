@@ -27,10 +27,15 @@ type slogHandler struct {
 }
 
 // Enabled reports whether the handler handles records at the given level.
+// Respects per-request level overrides set via log.OverrideLogLevel.
 // ColdBrew levels are inverted (Error=0 < Warn=1 < Info=2 < Debug=3),
 // so >= means "configured level is at least as verbose as the message level."
-func (h *slogHandler) Enabled(_ context.Context, level slog.Level) bool {
-	return h.l.GetLevel() >= fromSlogLevel(level)
+func (h *slogHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	cbLevel := h.l.GetLevel()
+	if override, found := log.GetOverridenLogLevel(ctx); found {
+		cbLevel = override
+	}
+	return cbLevel >= fromSlogLevel(level)
 }
 
 // The skip value accounts for the call stack between Handle and the actual caller:

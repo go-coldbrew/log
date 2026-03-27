@@ -200,8 +200,8 @@ func NewLogger(options ...loggers.Option) loggers.BaseLogger {
 // NewLoggerWithHandler returns a BaseLogger implementation backed by the
 // provided slog.Handler. Use this when you need a custom handler
 // (e.g., for testing or custom output formats).
-// Note: SetLevel updates the internally tracked level but the provided handler's
-// own level filtering takes precedence for actual output control.
+// Note: SetLevel updates the internally tracked level. Both this level and
+// the provided handler's own level filtering apply; the stricter one wins.
 func NewLoggerWithHandler(handler slog.Handler, options ...loggers.Option) loggers.BaseLogger {
 	opt := loggers.GetDefaultOptions()
 	for _, f := range options {
@@ -210,6 +210,10 @@ func NewLoggerWithHandler(handler slog.Handler, options ...loggers.Option) logge
 
 	levelVar := &slog.LevelVar{}
 	levelVar.Set(toSlogLevel(opt.Level))
+
+	if opt.ReplaceStdLogger {
+		slog.SetDefault(slog.New(handler))
+	}
 
 	return &logger{
 		handler:  handler,
