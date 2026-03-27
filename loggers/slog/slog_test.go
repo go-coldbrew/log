@@ -375,6 +375,9 @@ func TestWireCompatibility_CustomTimestampKey(t *testing.T) {
 	if _, ok := m["ts"]; !ok {
 		t.Errorf("expected 'ts' key, got keys: %v", keys(m))
 	}
+	if _, ok := m["time"]; ok {
+		t.Errorf("unexpected 'time' key — should be renamed to 'ts'")
+	}
 }
 
 func TestDurationFormatting(t *testing.T) {

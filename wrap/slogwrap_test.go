@@ -3,6 +3,7 @@ package wrap
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 	"sync"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/go-coldbrew/log"
 	"github.com/go-coldbrew/log/loggers"
+	cbslog "github.com/go-coldbrew/log/loggers/slog"
 )
 
 // captureLogger is a mock BaseLogger that records log calls for inspection.
@@ -394,4 +396,23 @@ func TestWithGroupThenWithAttrs(t *testing.T) {
 	if !argsContain(entry.Args, "app.action", "deploy") {
 		t.Errorf("expected app.action=deploy, got %v", entry.Args)
 	}
+}
+
+// TestReentryGuardIntegration verifies that having both the slog backend AND
+// the slog bridge active simultaneously does not cause an infinite loop.
+func TestReentryGuardIntegration(t *testing.T) {
+	handler := slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug})
+	log.SetLogger(log.NewLogger(cbslog.NewLoggerWithHandler(handler, loggers.WithCallerInfo(false))))
+
+	sl := ToSlogLogger(log.GetLogger())
+
+	// This would infinite-loop without re-entry guards:
+	// sl.Info → bridge.Handle → log.Logger.Log → slog backend.Log → (guard breaks)
+	sl.InfoContext(context.Background(), "should not loop", "key", "value")
+
+	// Reverse: ColdBrew log through slog backend while bridge is slog default.
+	slog.SetDefault(sl)
+	log.Info(context.Background(), "msg", "reverse direction", "key", "value")
+
+	// If we got here without hanging, the guards work.
 }
