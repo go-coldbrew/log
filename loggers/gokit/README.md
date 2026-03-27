@@ -13,7 +13,40 @@
 import "github.com/go-coldbrew/log/loggers/gokit"
 ```
 
-Package gokit provides BaseLogger implementation for go\-kit/log
+Deprecated: Package gokit provides BaseLogger implementation for go\-kit/log. The go\-kit/log library is in maintenance mode and no longer actively developed. Use the slog backend \(loggers/slog\) instead, which is the default and recommended backend.
+
+<details><summary>Example</summary>
+<p>
+
+This example shows how to use the gokit backend.
+
+Deprecated: Use the slog backend instead \(loggers/slog\). The go\-kit/log library is in maintenance mode and no longer actively developed.
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/go-coldbrew/log"
+	"github.com/go-coldbrew/log/loggers"
+	"github.com/go-coldbrew/log/loggers/gokit"
+)
+
+func main() {
+	logger := gokit.NewLogger(
+		loggers.WithJSONLogs(true),
+		loggers.WithCallerInfo(true),
+	)
+	log.SetLogger(log.NewLogger(logger))
+
+	ctx := context.Background()
+	log.Info(ctx, "msg", "request handled", "method", "GET", "path", "/api/v1")
+}
+```
+
+</p>
+</details>
 
 ## Index
 
@@ -21,7 +54,7 @@ Package gokit provides BaseLogger implementation for go\-kit/log
 
 
 <a name="NewLogger"></a>
-## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/gokit/gokit.go#L52>)
+## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/gokit/gokit.go#L54>)
 
 ```go
 func NewLogger(options ...loggers.Option) loggers.BaseLogger

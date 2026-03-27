@@ -1,4 +1,6 @@
-// Package gokit provides BaseLogger implementation for go-kit/log
+// Deprecated: Package gokit provides BaseLogger implementation for go-kit/log.
+// The go-kit/log library is in maintenance mode and no longer actively developed.
+// Use the slog backend (loggers/slog) instead, which is the default and recommended backend.
 package gokit
 
 import (
