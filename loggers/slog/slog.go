@@ -61,7 +61,8 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 	}
 
 	var msg string
-	var kvArgs []any
+	kvArgs := make([]any, 0, len(args))
+	msgFound := false
 	if len(args) == 1 {
 		msg = stringKey(args[0])
 	} else if len(args) > 1 {
@@ -70,10 +71,11 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 				msg = stringKey(args[i+1])
 				kvArgs = append(kvArgs, args[:i]...)
 				kvArgs = append(kvArgs, args[i+2:]...)
+				msgFound = true
 				break
 			}
 		}
-		if kvArgs == nil {
+		if !msgFound {
 			kvArgs = args
 		}
 	}

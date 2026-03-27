@@ -28,14 +28,15 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		msg = args[0]
 		args = args[1:]
 	}
-	logger = logger.With(args...)
-
 	ctxFields := loggers.FromContext(ctx)
 	if ctxFields != nil {
-		ctxFields.Range(func(k, v any) bool { logger = logger.With(k, v); return true })
+		ctxFields.Range(func(k, v any) bool { args = append(args, k, v); return true })
+	}
+	if len(args) > 0 {
+		logger = logger.With(args...)
 	}
 
-	logFunc := l.logger.Error
+	logFunc := logger.Error
 	switch level {
 	case loggers.DebugLevel:
 		logFunc = logger.Debug
