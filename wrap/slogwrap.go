@@ -54,8 +54,10 @@ func (h *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 
 	cbLevel := fromSlogLevel(record.Level)
 
-	args := make([]any, 0, 2+len(h.preformatted)+record.NumAttrs()*2)
-	args = append(args, loggers.MessageKey, record.Message)
+	// Use odd-leading form: message as first arg, then key-value pairs.
+	// This is the universal convention across all backends (zap, gokit, slog).
+	args := make([]any, 0, 1+len(h.preformatted)+record.NumAttrs()*2)
+	args = append(args, record.Message)
 
 	// Append pre-resolved attrs (keys already include their frozen group prefix).
 	args = append(args, h.preformatted...)

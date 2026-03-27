@@ -68,11 +68,19 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 	if len(args) == 1 {
 		msg = stringKey(args[0])
 	} else if len(args) > 1 {
-		for i := 0; i < len(args)-1; i += 2 {
-			if k, ok := args[i].(string); ok && k == loggers.MessageKey {
-				msg = stringKey(args[i+1])
-				msgIdx = i
-				break
+		// Odd-leading form: first arg is message, rest are key-value pairs.
+		// e.g., log.Info(ctx, "request processed", "id", 123)
+		if len(args)%2 != 0 {
+			msg = stringKey(args[0])
+			args = args[1:]
+		} else {
+			// Even-length: look for explicit "msg" key in pairs.
+			for i := 0; i < len(args)-1; i += 2 {
+				if k, ok := args[i].(string); ok && k == loggers.MessageKey {
+					msg = stringKey(args[i+1])
+					msgIdx = i
+					break
+				}
 			}
 		}
 	}

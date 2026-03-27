@@ -56,7 +56,12 @@ func newCaptureLogger(level loggers.Level) (*captureLogger, log.Logger) {
 }
 
 func argsContain(args []any, key, value string) bool {
-	for i := 0; i < len(args)-1; i += 2 {
+	// Bridge uses odd-leading form: args[0] is message, pairs start at index 1.
+	start := 0
+	if len(args)%2 != 0 {
+		start = 1
+	}
+	for i := start; i < len(args)-1; i += 2 {
 		k, _ := args[i].(string)
 		if k == key && fmt.Sprint(args[i+1]) == value {
 			return true
@@ -100,8 +105,9 @@ func TestHandleBasic(t *testing.T) {
 	if entry.Level != loggers.InfoLevel {
 		t.Errorf("expected InfoLevel, got %v", entry.Level)
 	}
-	if !argsContain(entry.Args, "msg", "hello") {
-		t.Errorf("expected msg=hello in args, got %v", entry.Args)
+	// Message is in leading position (odd-leading form).
+	if len(entry.Args) == 0 || fmt.Sprint(entry.Args[0]) != "hello" {
+		t.Errorf("expected leading message 'hello', got %v", entry.Args)
 	}
 	if !argsContain(entry.Args, "key", "value") {
 		t.Errorf("expected key=value in args, got %v", entry.Args)
@@ -287,7 +293,11 @@ func TestGroupAttrFlattening(t *testing.T) {
 
 	// Find the args as strings.
 	var pairs []string
-	for i := 0; i < len(entry.Args)-1; i += 2 {
+	start := 0
+	if len(entry.Args)%2 != 0 {
+		start = 1
+	}
+	for i := start; i < len(entry.Args)-1; i += 2 {
 		k, _ := entry.Args[i].(string)
 		pairs = append(pairs, k)
 	}

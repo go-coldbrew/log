@@ -44,6 +44,9 @@ func TestOverrideLogLevel(t *testing.T) {
 // TestOverrideLogLevelCausesLogging verifies that a per-request override
 // causes a message to be logged even when the global level would filter it.
 func TestOverrideLogLevelCausesLogging(t *testing.T) {
+	orig := GetLogger()
+	t.Cleanup(func() { SetLogger(orig) })
+
 	cl := &countingLogger{level: loggers.ErrorLevel}
 	l := NewLogger(cl)
 	SetLogger(l)
