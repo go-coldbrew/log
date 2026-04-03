@@ -467,7 +467,6 @@ func keys(m map[string]any) []string {
 type reentrantHandler struct {
 	inner  slog.Handler
 	logger loggers.BaseLogger
-	count  int
 }
 
 func (h *reentrantHandler) Enabled(ctx context.Context, level slog.Level) bool {
@@ -475,7 +474,6 @@ func (h *reentrantHandler) Enabled(ctx context.Context, level slog.Level) bool {
 }
 
 func (h *reentrantHandler) Handle(ctx context.Context, record slog.Record) error {
-	h.count++
 	if h.logger != nil {
 		// Always trigger re-entry — the slog re-entry guard is what
 		// prevents infinite recursion. Without the guard, this would loop forever.
