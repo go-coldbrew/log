@@ -24,6 +24,9 @@ type LogFields struct {
 func (o *LogFields) Add(key string, value any) {
 	if len(key) > 0 {
 		o.mu.Lock()
+		if o.m == nil {
+			o.m = make(map[string]any, 2)
+		}
 		o.m[key] = value
 		o.mu.Unlock()
 	}
@@ -32,7 +35,9 @@ func (o *LogFields) Add(key string, value any) {
 // Del deletes a log field entry
 func (o *LogFields) Del(key string) {
 	o.mu.Lock()
-	delete(o.m, key)
+	if o.m != nil {
+		delete(o.m, key)
+	}
 	o.mu.Unlock()
 }
 
@@ -50,6 +55,10 @@ func (o *LogFields) Load(key any) (any, bool) {
 		return nil, false
 	}
 	o.mu.RLock()
+	if o.m == nil {
+		o.mu.RUnlock()
+		return nil, false
+	}
 	v, found := o.m[k]
 	o.mu.RUnlock()
 	return v, found
@@ -64,10 +73,15 @@ func (o *LogFields) Delete(key any) {
 
 // Range calls f sequentially for each key and value in the map.
 // If f returns false, Range stops the iteration.
+// The callback may safely call Add/Del on the same LogFields instance.
 func (o *LogFields) Range(f func(key, value any) bool) {
 	o.mu.RLock()
-	defer o.mu.RUnlock()
+	snapshot := make(map[string]any, len(o.m))
 	for k, v := range o.m {
+		snapshot[k] = v
+	}
+	o.mu.RUnlock()
+	for k, v := range snapshot {
 		if !f(k, v) {
 			break
 		}
