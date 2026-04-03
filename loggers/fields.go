@@ -13,8 +13,8 @@ var (
 
 // LogFields contains all fields that have to be added to logs.
 // Uses RWMutex + map instead of sync.Map since LogFields is per-request
-// and never shared across goroutines. This avoids sync.Map's internal
-// trie node allocations (~13% of interceptor chain allocs).
+// and typically not shared across goroutines. A plain map with explicit
+// locking is cheaper than sync.Map for this write-few-read-once pattern.
 type LogFields struct {
 	mu sync.RWMutex
 	m  map[string]any
@@ -76,13 +76,22 @@ func (o *LogFields) Delete(key any) {
 // The callback may safely call Add/Del on the same LogFields instance.
 func (o *LogFields) Range(f func(key, value any) bool) {
 	o.mu.RLock()
-	snapshot := make(map[string]any, len(o.m))
+	if len(o.m) == 0 {
+		o.mu.RUnlock()
+		return
+	}
+	// Snapshot into a slice (cheaper than map copy for small field counts).
+	type kv struct {
+		k string
+		v any
+	}
+	entries := make([]kv, 0, len(o.m))
 	for k, v := range o.m {
-		snapshot[k] = v
+		entries = append(entries, kv{k, v})
 	}
 	o.mu.RUnlock()
-	for k, v := range snapshot {
-		if !f(k, v) {
+	for _, e := range entries {
+		if !f(e.k, e.v) {
 			break
 		}
 	}
