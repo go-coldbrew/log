@@ -461,3 +461,70 @@ func keys(m map[string]any) []string {
 	}
 	return ks
 }
+
+// reentrantHandler is a slog.Handler that logs again when handling a record,
+// triggering the re-entry guard.
+type reentrantHandler struct {
+	inner  slog.Handler
+	logger loggers.BaseLogger
+}
+
+func (h *reentrantHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.inner.Enabled(ctx, level)
+}
+
+func (h *reentrantHandler) Handle(ctx context.Context, record slog.Record) error {
+	if h.logger != nil {
+		// Always trigger re-entry — the slog re-entry guard is what
+		// prevents infinite recursion. Without the guard, this would loop forever.
+		h.logger.Log(ctx, loggers.InfoLevel, 1, "msg", "re-entrant log")
+	}
+	return h.inner.Handle(ctx, record)
+}
+
+func (h *reentrantHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &reentrantHandler{inner: h.inner.WithAttrs(attrs), logger: h.logger}
+}
+
+func (h *reentrantHandler) WithGroup(name string) slog.Handler {
+	return &reentrantHandler{inner: h.inner.WithGroup(name), logger: h.logger}
+}
+
+func TestSlogReentryGuard(t *testing.T) {
+	var buf bytes.Buffer
+	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
+	rh := &reentrantHandler{inner: inner}
+
+	lgr := NewLoggerWithHandler(rh, loggers.WithLevel(loggers.DebugLevel))
+	rh.logger = lgr // wire the re-entry trigger
+
+	// This should NOT infinite-loop thanks to the re-entry guard.
+	// The guard uses context.WithValue(slogBackendKey{}) to detect re-entry.
+	done := make(chan struct{})
+	go func() {
+		lgr.Log(context.Background(), loggers.InfoLevel, 0, "msg", "trigger")
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Success: no infinite loop
+	case <-time.After(2 * time.Second):
+		t.Fatal("slog re-entry guard failed: infinite loop detected")
+	}
+
+	// Parse JSON output and verify exactly one log record was written.
+	// The re-entrant "re-entrant log" call should be dropped by the guard.
+	output := buf.String()
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("expected exactly 1 log line, got %d: %s", len(lines), output)
+	}
+	var record map[string]any
+	if err := json.Unmarshal([]byte(lines[0]), &record); err != nil {
+		t.Fatalf("failed to parse log JSON: %v", err)
+	}
+	if msg, ok := record["msg"].(string); !ok || msg != "trigger" {
+		t.Errorf("expected msg='trigger', got %v", record["msg"])
+	}
+}
