@@ -476,8 +476,9 @@ func (h *reentrantHandler) Enabled(ctx context.Context, level slog.Level) bool {
 
 func (h *reentrantHandler) Handle(ctx context.Context, record slog.Record) error {
 	h.count++
-	if h.count <= 1 && h.logger != nil {
-		// Trigger re-entry: log again from inside the handler
+	if h.logger != nil {
+		// Always trigger re-entry — the slog re-entry guard is what
+		// prevents infinite recursion. Without the guard, this would loop forever.
 		h.logger.Log(ctx, loggers.InfoLevel, 1, "msg", "re-entrant log")
 	}
 	return h.inner.Handle(ctx, record)
@@ -514,9 +515,18 @@ func TestSlogReentryGuard(t *testing.T) {
 		t.Fatal("slog re-entry guard failed: infinite loop detected")
 	}
 
-	// Verify only the outer log was written (re-entrant call should be dropped)
+	// Parse JSON output and verify exactly one log record was written.
+	// The re-entrant "re-entrant log" call should be dropped by the guard.
 	output := buf.String()
-	if output == "" {
-		t.Error("expected at least one log line")
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("expected exactly 1 log line, got %d: %s", len(lines), output)
+	}
+	var record map[string]any
+	if err := json.Unmarshal([]byte(lines[0]), &record); err != nil {
+		t.Fatalf("failed to parse log JSON: %v", err)
+	}
+	if msg, ok := record["msg"].(string); !ok || msg != "trigger" {
+		t.Errorf("expected msg='trigger', got %v", record["msg"])
 	}
 }
