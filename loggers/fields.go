@@ -103,8 +103,12 @@ func newLogFields() *LogFields {
 }
 
 // AddToLogContext adds log fields to context.
-// Any info added here will be added to all logs using this context
+// Any info added here will be added to all logs using this context.
+// If ctx is nil, context.Background() is used.
 func AddToLogContext(ctx context.Context, key string, value any) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	data := FromContext(ctx)
 	if data == nil {
 		data = newLogFields()
