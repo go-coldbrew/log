@@ -2,43 +2,31 @@ package loggers
 
 import (
 	"context"
-	"sync"
-)
 
-type logsContext string
-
-var (
-	contextKey logsContext = "LogsContextKey"
+	"github.com/go-coldbrew/options"
 )
 
 // LogFields contains all fields that have to be added to logs.
-// Uses RWMutex + map instead of sync.Map since LogFields is per-request
-// and typically not shared across goroutines. A plain map with explicit
-// locking is cheaper than sync.Map for this write-few-read-once pattern.
+// It wraps *options.Options to share the same RequestContext storage,
+// eliminating a separate context.WithValue allocation per request.
+// LogFields should be obtained via FromContext or AddToLogContext;
+// the zero value is safe but acts as a no-op.
 type LogFields struct {
-	mu sync.RWMutex
-	m  map[string]any
+	inner *options.Options
 }
 
-// Add or modify log fields
+// Add adds or modifies a log field.
 func (o *LogFields) Add(key string, value any) {
-	if len(key) > 0 {
-		o.mu.Lock()
-		if o.m == nil {
-			o.m = make(map[string]any, 2)
-		}
-		o.m[key] = value
-		o.mu.Unlock()
+	if o.inner != nil && len(key) > 0 {
+		o.inner.Add(key, value)
 	}
 }
 
-// Del deletes a log field entry
+// Del deletes a log field entry.
 func (o *LogFields) Del(key string) {
-	o.mu.Lock()
-	if o.m != nil {
-		delete(o.m, key)
+	if o.inner != nil {
+		o.inner.Del(key)
 	}
-	o.mu.Unlock()
 }
 
 // Store is a sync.Map-compatible alias for Add.
@@ -50,18 +38,10 @@ func (o *LogFields) Store(key, value any) {
 
 // Load retrieves a value by key.
 func (o *LogFields) Load(key any) (any, bool) {
-	k, ok := key.(string)
-	if !ok {
+	if o.inner == nil {
 		return nil, false
 	}
-	o.mu.RLock()
-	if o.m == nil {
-		o.mu.RUnlock()
-		return nil, false
-	}
-	v, found := o.m[k]
-	o.mu.RUnlock()
-	return v, found
+	return o.inner.Load(key)
 }
 
 // Delete is a sync.Map-compatible alias for Del.
@@ -74,32 +54,16 @@ func (o *LogFields) Delete(key any) {
 // Range calls f sequentially for each key and value in the map.
 // If f returns false, Range stops the iteration.
 // The callback may safely call Add/Del on the same LogFields instance.
+// Uses a slice snapshot for efficient iteration over small field counts.
 func (o *LogFields) Range(f func(key, value any) bool) {
-	o.mu.RLock()
-	if len(o.m) == 0 {
-		o.mu.RUnlock()
-		return
-	}
-	// Snapshot into a slice (cheaper than map copy for small field counts).
-	type kv struct {
-		k string
-		v any
-	}
-	entries := make([]kv, 0, len(o.m))
-	for k, v := range o.m {
-		entries = append(entries, kv{k, v})
-	}
-	o.mu.RUnlock()
-	for _, e := range entries {
-		if !f(e.k, e.v) {
-			break
-		}
+	if o.inner != nil {
+		o.inner.RangeSlice(f)
 	}
 }
 
-// newLogFields creates a LogFields with an initialized map.
-func newLogFields() *LogFields {
-	return &LogFields{m: make(map[string]any, 2)}
+// wrapAsLogFields wraps an *options.Options as a *LogFields.
+func wrapAsLogFields(opts *options.Options) *LogFields {
+	return &LogFields{inner: opts}
 }
 
 // AddToLogContext adds log fields to context.
@@ -109,24 +73,16 @@ func AddToLogContext(ctx context.Context, key string, value any) context.Context
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	data := FromContext(ctx)
-	if data == nil {
-		data = newLogFields()
-		ctx = context.WithValue(ctx, contextKey, data)
-	}
-	data.Add(key, value)
-	return ctx
+	return options.AddToLogFields(ctx, key, value)
 }
 
-// FromContext fetchs log fields from provided context
+// FromContext fetches log fields from provided context.
 func FromContext(ctx context.Context) *LogFields {
 	if ctx == nil {
 		return nil
 	}
-	if h := ctx.Value(contextKey); h != nil {
-		if logData, ok := h.(*LogFields); ok {
-			return logData
-		}
+	if opts := options.LogFieldsFromContext(ctx); opts != nil {
+		return wrapAsLogFields(opts)
 	}
 	return nil
 }

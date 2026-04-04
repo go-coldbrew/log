@@ -29,6 +29,10 @@ Package loggers provides loggers implementation for log package
   - [func FromContext\(ctx context.Context\) \*LogFields](<#FromContext>)
   - [func \(o \*LogFields\) Add\(key string, value any\)](<#LogFields.Add>)
   - [func \(o \*LogFields\) Del\(key string\)](<#LogFields.Del>)
+  - [func \(o \*LogFields\) Delete\(key any\)](<#LogFields.Delete>)
+  - [func \(o \*LogFields\) Load\(key any\) \(any, bool\)](<#LogFields.Load>)
+  - [func \(o \*LogFields\) Range\(f func\(key, value any\) bool\)](<#LogFields.Range>)
+  - [func \(o \*LogFields\) Store\(key, value any\)](<#LogFields.Store>)
 - [type Option](<#Option>)
   - [func WithCallerFieldName\(name string\) Option](<#WithCallerFieldName>)
   - [func WithCallerFileDepth\(depth int\) Option](<#WithCallerFileDepth>)
@@ -98,13 +102,13 @@ var (
 ```
 
 <a name="AddToLogContext"></a>
-## func [AddToLogContext](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L33>)
+## func [AddToLogContext](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L72>)
 
 ```go
 func AddToLogContext(ctx context.Context, key string, value any) context.Context
 ```
 
-AddToLogContext adds log fields to context. Any info added here will be added to all logs using this context
+AddToLogContext adds log fields to context. Any info added here will be added to all logs using this context. If ctx is nil, context.Background\(\) is used.
 
 <details><summary>Example</summary>
 <p>
@@ -195,42 +199,78 @@ func (level Level) String() string
 Convert the Level to a string. E.g. ErrorLevel becomes "error".
 
 <a name="LogFields"></a>
-## type [LogFields](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L15-L17>)
+## type [LogFields](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L14-L16>)
 
-LogFields contains all fields that have to be added to logs
+LogFields contains all fields that have to be added to logs. It wraps \*options.Options to share the same RequestContext storage, eliminating a separate context.WithValue allocation per request. LogFields should be obtained via FromContext or AddToLogContext; the zero value is safe but acts as a no\-op.
 
 ```go
 type LogFields struct {
-    sync.Map
+    // contains filtered or unexported fields
 }
 ```
 
 <a name="FromContext"></a>
-### func [FromContext](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L46>)
+### func [FromContext](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L80>)
 
 ```go
 func FromContext(ctx context.Context) *LogFields
 ```
 
-FromContext fetchs log fields from provided context
+FromContext fetches log fields from provided context.
 
 <a name="LogFields.Add"></a>
-### func \(\*LogFields\) [Add](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L20>)
+### func \(\*LogFields\) [Add](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L19>)
 
 ```go
 func (o *LogFields) Add(key string, value any)
 ```
 
-Add or modify log fields
+Add adds or modifies a log field.
 
 <a name="LogFields.Del"></a>
-### func \(\*LogFields\) [Del](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L27>)
+### func \(\*LogFields\) [Del](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L26>)
 
 ```go
 func (o *LogFields) Del(key string)
 ```
 
-Del deletes a log field entry
+Del deletes a log field entry.
+
+<a name="LogFields.Delete"></a>
+### func \(\*LogFields\) [Delete](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L48>)
+
+```go
+func (o *LogFields) Delete(key any)
+```
+
+Delete is a sync.Map\-compatible alias for Del.
+
+<a name="LogFields.Load"></a>
+### func \(\*LogFields\) [Load](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L40>)
+
+```go
+func (o *LogFields) Load(key any) (any, bool)
+```
+
+Load retrieves a value by key.
+
+<a name="LogFields.Range"></a>
+### func \(\*LogFields\) [Range](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L58>)
+
+```go
+func (o *LogFields) Range(f func(key, value any) bool)
+```
+
+Range calls f sequentially for each key and value in the map. If f returns false, Range stops the iteration. The callback may safely call Add/Del on the same LogFields instance. Uses a slice snapshot for efficient iteration over small field counts.
+
+<a name="LogFields.Store"></a>
+### func \(\*LogFields\) [Store](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L33>)
+
+```go
+func (o *LogFields) Store(key, value any)
+```
+
+Store is a sync.Map\-compatible alias for Add.
 
 <a name="Option"></a>
 ## type [Option](<https://github.com/go-coldbrew/log/blob/main/loggers/loggers.go#L131>)
