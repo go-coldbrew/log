@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-coldbrew/log/loggers"
@@ -17,9 +19,10 @@ import (
 type slogBackendKey struct{}
 
 type logger struct {
-	handler  slog.Handler
-	levelVar *slog.LevelVar
-	opt      loggers.Options
+	handler     slog.Handler
+	levelVar    *slog.LevelVar
+	opt         loggers.Options
+	callerCache sync.Map // pc (uintptr) → "file:line" (string)
 }
 
 func stringKey(v any) string {
@@ -85,13 +88,17 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		}
 	}
 
+	// Capture PC early — used for both caller info cache and slog.Record.
+	var pcs [1]uintptr
+	runtime.Callers(skip+2, pcs[:])
+
 	// Stack-allocated buffer avoids heap allocation for <=8 attrs (common case).
 	var attrBuf [8]slog.Attr
 	attrs := attrBuf[:0]
 
 	if l.opt.CallerInfo {
-		_, file, line := loggers.FetchCallerInfo(skip+1, l.opt.CallerFileDepth)
-		attrs = append(attrs, slog.String(l.opt.CallerFieldName, fmt.Sprintf("%s:%d", file, line)))
+		callerStr := l.cachedCallerInfo(pcs[0], skip+1)
+		attrs = append(attrs, slog.String(l.opt.CallerFieldName, callerStr))
 	}
 
 	ctxFields := loggers.FromContext(ctx)
@@ -113,12 +120,23 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		attrs = append(attrs, slog.Any("!BADKEY", args[len(args)-1]))
 	}
 
-	var pcs [1]uintptr
-	runtime.Callers(skip+2, pcs[:])
 	record := slog.NewRecord(time.Now(), slogLevel, msg, pcs[0])
 	record.AddAttrs(attrs...)
 
 	_ = l.handler.Handle(ctx, record)
+}
+
+// cachedCallerInfo returns a "file:line" string for the given program counter,
+// using a per-logger cache to avoid repeated runtime.FuncForPC, path trimming,
+// and string formatting for the same call site.
+func (l *logger) cachedCallerInfo(pc uintptr, skip int) string {
+	if v, ok := l.callerCache.Load(pc); ok {
+		return v.(string)
+	}
+	_, file, line := loggers.FetchCallerInfo(skip+1, l.opt.CallerFileDepth)
+	s := file + ":" + strconv.Itoa(line)
+	l.callerCache.Store(pc, s)
+	return s
 }
 
 func (l *logger) SetLevel(level loggers.Level) {
