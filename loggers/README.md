@@ -102,7 +102,7 @@ var (
 ```
 
 <a name="AddToLogContext"></a>
-## func [AddToLogContext](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L63>)
+## func [AddToLogContext](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L72>)
 
 ```go
 func AddToLogContext(ctx context.Context, key string, value any) context.Context
@@ -199,9 +199,9 @@ func (level Level) String() string
 Convert the Level to a string. E.g. ErrorLevel becomes "error".
 
 <a name="LogFields"></a>
-## type [LogFields](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L12-L14>)
+## type [LogFields](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L14-L16>)
 
-LogFields contains all fields that have to be added to logs. It wraps \*options.Options to share the same RequestContext storage, eliminating a separate context.WithValue allocation per request.
+LogFields contains all fields that have to be added to logs. It wraps \*options.Options to share the same RequestContext storage, eliminating a separate context.WithValue allocation per request. LogFields should be obtained via FromContext or AddToLogContext; the zero value is safe but acts as a no\-op.
 
 ```go
 type LogFields struct {
@@ -210,7 +210,7 @@ type LogFields struct {
 ```
 
 <a name="FromContext"></a>
-### func [FromContext](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L71>)
+### func [FromContext](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L80>)
 
 ```go
 func FromContext(ctx context.Context) *LogFields
@@ -219,7 +219,7 @@ func FromContext(ctx context.Context) *LogFields
 FromContext fetches log fields from provided context.
 
 <a name="LogFields.Add"></a>
-### func \(\*LogFields\) [Add](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L17>)
+### func \(\*LogFields\) [Add](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L19>)
 
 ```go
 func (o *LogFields) Add(key string, value any)
@@ -228,7 +228,7 @@ func (o *LogFields) Add(key string, value any)
 Add adds or modifies a log field.
 
 <a name="LogFields.Del"></a>
-### func \(\*LogFields\) [Del](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L24>)
+### func \(\*LogFields\) [Del](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L26>)
 
 ```go
 func (o *LogFields) Del(key string)
@@ -237,7 +237,7 @@ func (o *LogFields) Del(key string)
 Del deletes a log field entry.
 
 <a name="LogFields.Delete"></a>
-### func \(\*LogFields\) [Delete](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L41>)
+### func \(\*LogFields\) [Delete](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L48>)
 
 ```go
 func (o *LogFields) Delete(key any)
@@ -246,7 +246,7 @@ func (o *LogFields) Delete(key any)
 Delete is a sync.Map\-compatible alias for Del.
 
 <a name="LogFields.Load"></a>
-### func \(\*LogFields\) [Load](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L36>)
+### func \(\*LogFields\) [Load](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L40>)
 
 ```go
 func (o *LogFields) Load(key any) (any, bool)
@@ -255,7 +255,7 @@ func (o *LogFields) Load(key any) (any, bool)
 Load retrieves a value by key.
 
 <a name="LogFields.Range"></a>
-### func \(\*LogFields\) [Range](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L51>)
+### func \(\*LogFields\) [Range](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L58>)
 
 ```go
 func (o *LogFields) Range(f func(key, value any) bool)
@@ -264,7 +264,7 @@ func (o *LogFields) Range(f func(key, value any) bool)
 Range calls f sequentially for each key and value in the map. If f returns false, Range stops the iteration. The callback may safely call Add/Del on the same LogFields instance. Uses a slice snapshot for efficient iteration over small field counts.
 
 <a name="LogFields.Store"></a>
-### func \(\*LogFields\) [Store](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L29>)
+### func \(\*LogFields\) [Store](<https://github.com/go-coldbrew/log/blob/main/loggers/fields.go#L33>)
 
 ```go
 func (o *LogFields) Store(key, value any)

@@ -9,20 +9,24 @@ import (
 // LogFields contains all fields that have to be added to logs.
 // It wraps *options.Options to share the same RequestContext storage,
 // eliminating a separate context.WithValue allocation per request.
+// LogFields should be obtained via FromContext or AddToLogContext;
+// the zero value is safe but acts as a no-op.
 type LogFields struct {
 	inner *options.Options
 }
 
 // Add adds or modifies a log field.
 func (o *LogFields) Add(key string, value any) {
-	if len(key) > 0 {
+	if o.inner != nil && len(key) > 0 {
 		o.inner.Add(key, value)
 	}
 }
 
 // Del deletes a log field entry.
 func (o *LogFields) Del(key string) {
-	o.inner.Del(key)
+	if o.inner != nil {
+		o.inner.Del(key)
+	}
 }
 
 // Store is a sync.Map-compatible alias for Add.
@@ -34,6 +38,9 @@ func (o *LogFields) Store(key, value any) {
 
 // Load retrieves a value by key.
 func (o *LogFields) Load(key any) (any, bool) {
+	if o.inner == nil {
+		return nil, false
+	}
 	return o.inner.Load(key)
 }
 
@@ -49,7 +56,9 @@ func (o *LogFields) Delete(key any) {
 // The callback may safely call Add/Del on the same LogFields instance.
 // Uses a slice snapshot for efficient iteration over small field counts.
 func (o *LogFields) Range(f func(key, value any) bool) {
-	o.inner.RangeSlice(f)
+	if o.inner != nil {
+		o.inner.RangeSlice(f)
+	}
 }
 
 // wrapAsLogFields wraps an *options.Options as a *LogFields.
