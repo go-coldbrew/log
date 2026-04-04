@@ -90,7 +90,7 @@ func main() {
 
 
 <a name="NewLogger"></a>
-## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/slog/slog.go#L153>)
+## func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/loggers/slog/slog.go#L161>)
 
 ```go
 func NewLogger(options ...loggers.Option) loggers.BaseLogger
@@ -99,7 +99,7 @@ func NewLogger(options ...loggers.Option) loggers.BaseLogger
 NewLogger returns a BaseLogger implementation backed by log/slog.
 
 <a name="NewLoggerWithHandler"></a>
-## func [NewLoggerWithHandler](<https://github.com/go-coldbrew/log/blob/main/loggers/slog/slog.go#L204>)
+## func [NewLoggerWithHandler](<https://github.com/go-coldbrew/log/blob/main/loggers/slog/slog.go#L212>)
 
 ```go
 func NewLoggerWithHandler(handler slog.Handler, options ...loggers.Option) loggers.BaseLogger
