@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-coldbrew/log/loggers"
@@ -17,9 +19,10 @@ import (
 type slogBackendKey struct{}
 
 type logger struct {
-	handler  slog.Handler
-	levelVar *slog.LevelVar
-	opt      loggers.Options
+	handler     slog.Handler
+	levelVar    *slog.LevelVar
+	opt         loggers.Options
+	callerCache sync.Map // pc (uintptr) → "file:line" (string)
 }
 
 func stringKey(v any) string {
@@ -85,13 +88,17 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		}
 	}
 
+	// Capture PC early — used for both caller info cache and slog.Record.
+	var pcs [1]uintptr
+	runtime.Callers(skip+2, pcs[:])
+
 	// Stack-allocated buffer avoids heap allocation for <=8 attrs (common case).
 	var attrBuf [8]slog.Attr
 	attrs := attrBuf[:0]
 
 	if l.opt.CallerInfo {
-		_, file, line := loggers.FetchCallerInfo(skip+1, l.opt.CallerFileDepth)
-		attrs = append(attrs, slog.String(l.opt.CallerFieldName, fmt.Sprintf("%s:%d", file, line)))
+		callerStr := l.cachedCallerInfo(pcs[0])
+		attrs = append(attrs, slog.String(l.opt.CallerFieldName, callerStr))
 	}
 
 	ctxFields := loggers.FromContext(ctx)
@@ -113,12 +120,41 @@ func (l *logger) Log(ctx context.Context, level loggers.Level, skip int, args ..
 		attrs = append(attrs, slog.Any("!BADKEY", args[len(args)-1]))
 	}
 
-	var pcs [1]uintptr
-	runtime.Callers(skip+2, pcs[:])
 	record := slog.NewRecord(time.Now(), slogLevel, msg, pcs[0])
 	record.AddAttrs(attrs...)
 
 	_ = l.handler.Handle(ctx, record)
+}
+
+// cachedCallerInfo returns a "file:line" string for the given program counter,
+// using a per-logger cache to avoid repeated frame resolution and string
+// formatting for the same call site. The cache is bounded by the number of
+// unique log call sites in the binary (typically hundreds).
+func (l *logger) cachedCallerInfo(pc uintptr) string {
+	if v, ok := l.callerCache.Load(pc); ok {
+		return v.(string)
+	}
+	// Derive file:line from the pc we already captured for slog.Record,
+	// avoiding a redundant runtime.Caller call.
+	frames := runtime.CallersFrames([]uintptr{pc})
+	f, _ := frames.Next()
+	file := f.File
+	depth := l.opt.CallerFileDepth
+	if depth <= 0 {
+		depth = 2
+	}
+	for i := len(file) - 1; i > 0; i-- {
+		if file[i] == '/' {
+			depth--
+			if depth == 0 {
+				file = file[i+1:]
+				break
+			}
+		}
+	}
+	s := file + ":" + strconv.Itoa(f.Line)
+	l.callerCache.LoadOrStore(pc, s)
+	return s
 }
 
 func (l *logger) SetLevel(level loggers.Level) {
