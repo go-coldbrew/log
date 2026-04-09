@@ -131,6 +131,10 @@ func fromSlogLevel(level slog.Level) loggers.Level {
 // memory exhaustion from pathological input.
 const maxGroupDepth = 10
 
+// GroupDepthExceededPlaceholder is the value used when slog group nesting
+// exceeds maxGroupDepth.
+const GroupDepthExceededPlaceholder = "[nested group depth exceeded]"
+
 // appendAttr flattens an slog.Attr into key-value pairs, applying a group prefix.
 // depth tracks the current group nesting level to cap unbounded recursion.
 func appendAttr(args []any, groupPrefix string, a slog.Attr, depth int) []any {
@@ -146,7 +150,7 @@ func appendAttr(args []any, groupPrefix string, a slog.Attr, depth int) []any {
 
 	if a.Value.Kind() == slog.KindGroup {
 		if depth >= maxGroupDepth {
-			return append(args, key, "[nested group depth exceeded]")
+			return append(args, key, GroupDepthExceededPlaceholder)
 		}
 		groupAttrs := a.Value.Group()
 		innerPrefix := groupPrefix
