@@ -408,6 +408,55 @@ func TestWithGroupThenWithAttrs(t *testing.T) {
 	}
 }
 
+func TestAppendAttr_DeepNesting(t *testing.T) {
+	cl, l := newCaptureLogger(loggers.DebugLevel)
+	h := ToSlogHandler(l)
+
+	// Build a 15-level deep nested group: g0.g1.g2...g14.leaf = "deep"
+	attr := slog.String("leaf", "deep")
+	for i := 14; i >= 0; i-- {
+		attr = slog.Group(fmt.Sprintf("g%d", i), attr)
+	}
+
+	var r slog.Record
+	r.Level = slog.LevelInfo
+	r.Message = "deep nesting test"
+	r.AddAttrs(attr)
+	_ = h.Handle(context.Background(), r)
+
+	entry := cl.lastEntry()
+
+	// Groups deeper than maxGroupDepth (10) should be capped with placeholder.
+	foundPlaceholder := false
+	foundDeepLeaf := false
+	start := 0
+	if len(entry.Args)%2 != 0 {
+		start = 1
+	}
+	for i := start; i < len(entry.Args)-1; i += 2 {
+		v := fmt.Sprint(entry.Args[i+1])
+		if v == "[nested group depth exceeded]" {
+			foundPlaceholder = true
+		}
+		// If nesting worked past depth 10, we'd find "deep" at g0.g1...g14.leaf
+		if v == "deep" {
+			k := fmt.Sprint(entry.Args[i])
+			// Count the dots to verify depth — should NOT reach 15 levels
+			dots := strings.Count(k, ".")
+			if dots >= 14 {
+				foundDeepLeaf = true
+			}
+		}
+	}
+
+	if !foundPlaceholder {
+		t.Errorf("expected depth-exceeded placeholder in args, got: %v", entry.Args)
+	}
+	if foundDeepLeaf {
+		t.Error("should not have resolved all 15 levels of nesting")
+	}
+}
+
 // TestReentryGuardIntegration verifies that having both the slog backend AND
 // the slog bridge active simultaneously does not cause an infinite loop.
 func TestReentryGuardIntegration(t *testing.T) {

@@ -64,7 +64,7 @@ func (h *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 
 	// Append record attrs with the current group prefix.
 	record.Attrs(func(a slog.Attr) bool {
-		args = appendAttr(args, h.groupPrefix, a)
+		args = appendAttr(args, h.groupPrefix, a, 0)
 		return true
 	})
 
@@ -80,7 +80,7 @@ func (h *slogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	// and won't be affected by future WithGroup calls.
 	var resolved []any
 	for _, a := range attrs {
-		resolved = appendAttr(resolved, h.groupPrefix, a)
+		resolved = appendAttr(resolved, h.groupPrefix, a, 0)
 	}
 	newPreformatted := make([]any, len(h.preformatted), len(h.preformatted)+len(resolved))
 	copy(newPreformatted, h.preformatted)
@@ -126,8 +126,14 @@ func fromSlogLevel(level slog.Level) loggers.Level {
 	}
 }
 
+// maxGroupDepth is the maximum nesting depth for slog group attributes.
+// Beyond this depth, groups are replaced with a placeholder to prevent
+// memory exhaustion from pathological input.
+const maxGroupDepth = 10
+
 // appendAttr flattens an slog.Attr into key-value pairs, applying a group prefix.
-func appendAttr(args []any, groupPrefix string, a slog.Attr) []any {
+// depth tracks the current group nesting level to cap unbounded recursion.
+func appendAttr(args []any, groupPrefix string, a slog.Attr, depth int) []any {
 	a.Value = a.Value.Resolve()
 	if a.Equal(slog.Attr{}) {
 		return args
@@ -139,13 +145,16 @@ func appendAttr(args []any, groupPrefix string, a slog.Attr) []any {
 	}
 
 	if a.Value.Kind() == slog.KindGroup {
+		if depth >= maxGroupDepth {
+			return append(args, key, "[nested group depth exceeded]")
+		}
 		groupAttrs := a.Value.Group()
 		innerPrefix := groupPrefix
 		if a.Key != "" {
 			innerPrefix = groupPrefix + a.Key + "."
 		}
 		for _, ga := range groupAttrs {
-			args = appendAttr(args, innerPrefix, ga)
+			args = appendAttr(args, innerPrefix, ga, depth+1)
 		}
 		return args
 	}
