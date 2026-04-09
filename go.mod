@@ -1,6 +1,6 @@
 module github.com/go-coldbrew/log
 
-go 1.25.8
+go 1.25.9
 
 require (
 	github.com/go-coldbrew/options v0.3.0
