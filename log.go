@@ -217,6 +217,10 @@ func newHandlerFromBaseLogger(bl loggers.BaseLogger) *Handler { //nolint:staticc
 	}
 }
 
+func (a *baseLoggerAdapter) SetLevel(level loggers.Level) {
+	a.bl.SetLevel(level)
+}
+
 func (a *baseLoggerAdapter) Enabled(_ context.Context, level slog.Level) bool {
 	return a.bl.GetLevel() >= FromSlogLevel(level)
 }

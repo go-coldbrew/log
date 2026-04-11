@@ -78,6 +78,9 @@ func NewHandler(options ...loggers.Option) *Handler {
 //	h := log.NewHandlerWithInner(multi)
 //	log.SetDefault(h)
 func NewHandlerWithInner(inner slog.Handler, options ...loggers.Option) *Handler {
+	if inner == nil {
+		panic("log: NewHandlerWithInner called with nil inner handler")
+	}
 	opt := applyOptions(options)
 
 	levelVar := &slog.LevelVar{}
