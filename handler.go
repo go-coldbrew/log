@@ -116,8 +116,8 @@ func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool {
 		return true
 	}
 
-	// Only check per-request override when the base level would filter.
-	// Most requests have no override, so this avoids a context lookup on the hot path.
+	// Per-request override takes precedence over both ColdBrew's level and the
+	// inner handler's level — this is what makes OverrideLogLevel work.
 	if ctx != nil {
 		if override, found := GetOverridenLogLevel(ctx); found {
 			return override >= msgLevel
