@@ -2,6 +2,7 @@ package log_test
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/go-coldbrew/log"
 )
@@ -26,4 +27,17 @@ func ExampleAddToContext() {
 func ExampleError() {
 	ctx := context.Background()
 	log.Error(ctx, "msg", "database connection failed", "host", "db.internal", "port", 5432, "retry_in", "5s")
+}
+
+func ExampleAddAttrsToContext() {
+	ctx := context.Background()
+
+	// Typed attrs avoid interface boxing for high-performance paths
+	ctx = log.AddAttrsToContext(ctx,
+		slog.String("trace_id", "abc-123"),
+		slog.Int("user_id", 42),
+	)
+
+	// Both context fields and per-call attrs use typed values
+	slog.LogAttrs(ctx, slog.LevelInfo, "request handled", slog.Int("status", 200))
 }

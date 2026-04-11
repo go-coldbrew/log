@@ -71,7 +71,11 @@ const (
 	DebugLevel
 )
 
-// BaseLogger is the interface that needs to be implemented by client loggers
+// BaseLogger is the interface that needs to be implemented by client loggers.
+//
+// Deprecated: Implement slog.Handler instead and use log.NewHandlerWithInner
+// to compose it with ColdBrew's context field injection. BaseLogger is kept
+// for backward compatibility and will be removed in a future major version.
 type BaseLogger interface {
 	// Log logs a message at the given level. The args are key-value pairs.
 	// The key must be a string, while the value can be of any type.
