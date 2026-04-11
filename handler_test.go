@@ -10,8 +10,7 @@ import (
 	"github.com/go-coldbrew/log/loggers"
 )
 
-// parseJSON parses a JSON log line from a buffer. Returns the parsed map
-// and resets the buffer for the next call.
+// parseJSON parses a JSON log line from a buffer and resets it.
 func parseJSON(t *testing.T, buf *bytes.Buffer) map[string]any {
 	t.Helper()
 	var m map[string]any
@@ -22,14 +21,24 @@ func parseJSON(t *testing.T, buf *bytes.Buffer) map[string]any {
 	return m
 }
 
+// setDefaultForTest sets the global ColdBrew handler and restores the
+// previous state (both defaultHandler and slog.Default) on cleanup.
+func setDefaultForTest(t *testing.T, h *Handler) {
+	t.Helper()
+	prevSlog := slog.Default()
+	prevHandler := defaultHandler.Load()
+	SetDefault(h)
+	t.Cleanup(func() {
+		slog.SetDefault(prevSlog)
+		defaultHandler.Store(prevHandler)
+	})
+}
+
 func TestNativeSlog_ContextFieldInjection(t *testing.T) {
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := NewHandlerWithInner(inner, loggers.WithCallerInfo(false))
-	SetDefault(h)
-	t.Cleanup(func() {
-		defaultHandler.Store(nil)
-	})
+	setDefaultForTest(t, h)
 
 	ctx := context.Background()
 	ctx = AddToContext(ctx, "trace_id", "abc-123")
@@ -53,10 +62,7 @@ func TestNativeSlog_OverrideLogLevel(t *testing.T) {
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := NewHandlerWithInner(inner, loggers.WithLevel(loggers.InfoLevel), loggers.WithCallerInfo(false))
-	SetDefault(h)
-	t.Cleanup(func() {
-		defaultHandler.Store(nil)
-	})
+	setDefaultForTest(t, h)
 
 	// Without override: debug should be filtered.
 	slog.DebugContext(context.Background(), "should be filtered")
@@ -81,7 +87,6 @@ func TestHandler_WithAttrsPreservesContextInjection(t *testing.T) {
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := NewHandlerWithInner(inner, loggers.WithCallerInfo(false))
 
-	// WithAttrs returns a new *Handler that should still inject context fields.
 	wrapped := h.WithAttrs([]slog.Attr{slog.String("static_key", "static_val")})
 
 	ctx := context.Background()
@@ -126,12 +131,9 @@ func TestHandler_WithGroupPreservesContextInjection(t *testing.T) {
 	}
 
 	m := parseJSON(t, &buf)
-	// With JSONHandler, context fields added in Handle() are placed under the active group.
-	// Check that the record was produced (context injection happened).
 	if m["msg"] != "grouped message" {
 		t.Errorf("expected msg=grouped message, got %v", m["msg"])
 	}
-	// The trace_id is under the "app" group since WithGroup was applied to the inner handler.
 	appGroup, _ := m["app"].(map[string]any)
 	if appGroup == nil {
 		t.Fatal("expected app group in output")
@@ -218,12 +220,8 @@ func TestSetDefault_EnablesNativeSlog(t *testing.T) {
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := NewHandlerWithInner(inner, loggers.WithCallerInfo(false))
-	SetDefault(h)
-	t.Cleanup(func() {
-		defaultHandler.Store(nil)
-	})
+	setDefaultForTest(t, h)
 
-	// After SetDefault, slog.Default() should use our handler.
 	slog.Info("native slog call", "key", "value")
 	m := parseJSON(t, &buf)
 	if m["msg"] != "native slog call" {
@@ -238,8 +236,7 @@ func TestToAttr_SlogAttr(t *testing.T) {
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := NewHandlerWithInner(inner, loggers.WithCallerInfo(false))
-	SetDefault(h)
-	t.Cleanup(func() { defaultHandler.Store(nil) })
+	setDefaultForTest(t, h)
 
 	ctx := AddAttrsToContext(context.Background(), slog.String("user_id", "42"))
 	slog.InfoContext(ctx, "test")
@@ -254,10 +251,8 @@ func TestToAttr_SlogAttr_MapKeyIgnored(t *testing.T) {
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := NewHandlerWithInner(inner, loggers.WithCallerInfo(false))
-	SetDefault(h)
-	t.Cleanup(func() { defaultHandler.Store(nil) })
+	setDefaultForTest(t, h)
 
-	// Store attr under a different map key — Attr's own key should win.
 	ctx := context.Background()
 	ctx = loggers.AddToLogContext(ctx, "ignored_key", slog.String("real_key", "value"))
 	slog.InfoContext(ctx, "test")
@@ -275,8 +270,7 @@ func TestToAttr_SlogValue(t *testing.T) {
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := NewHandlerWithInner(inner, loggers.WithCallerInfo(false))
-	SetDefault(h)
-	t.Cleanup(func() { defaultHandler.Store(nil) })
+	setDefaultForTest(t, h)
 
 	ctx := context.Background()
 	ctx = loggers.AddToLogContext(ctx, "count", slog.IntValue(99))
@@ -292,8 +286,7 @@ func TestAddAttrsToContext_Multiple(t *testing.T) {
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := NewHandlerWithInner(inner, loggers.WithCallerInfo(false))
-	SetDefault(h)
-	t.Cleanup(func() { defaultHandler.Store(nil) })
+	setDefaultForTest(t, h)
 
 	ctx := AddAttrsToContext(context.Background(),
 		slog.String("trace_id", "abc-123"),
@@ -314,8 +307,7 @@ func TestAddAttrsToContext_Overwrites(t *testing.T) {
 	var buf bytes.Buffer
 	inner := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := NewHandlerWithInner(inner, loggers.WithCallerInfo(false))
-	SetDefault(h)
-	t.Cleanup(func() { defaultHandler.Store(nil) })
+	setDefaultForTest(t, h)
 
 	ctx := AddToContext(context.Background(), "trace_id", "old-value")
 	ctx = AddAttrsToContext(ctx, slog.String("trace_id", "new-value"))

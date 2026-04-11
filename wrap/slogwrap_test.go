@@ -455,6 +455,9 @@ func TestAppendAttr_DeepNesting(t *testing.T) {
 // TestReentryGuardIntegration verifies that having both the slog backend AND
 // the slog bridge active simultaneously does not cause an infinite loop.
 func TestReentryGuardIntegration(t *testing.T) {
+	prevSlog := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(prevSlog) })
+
 	inner := slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug})
 	h := log.NewHandlerWithInner(inner, loggers.WithCallerInfo(false))
 	log.SetDefault(h)

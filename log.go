@@ -177,8 +177,13 @@ func AddToContext(ctx context.Context, key string, value any) context.Context {
 }
 
 // AddAttrsToContext adds typed slog.Attr fields to the context.
-// Each Attr is stored keyed by its own Key, and emitted without interface boxing.
-// Use this with slog.LogAttrs for the zero-boxing logging path:
+// Each Attr is stored keyed by its own Key. At log time, the Handler recovers
+// the typed Attr via a type switch, preserving the original slog type information.
+//
+// Note: context storage goes through an any-typed API internally, so the Attr
+// is boxed once when stored. The benefit is at log emission time — the Handler
+// emits the Attr directly instead of wrapping it in slog.Any. Combine with
+// slog.LogAttrs for per-call attrs to avoid boxing on the hot path:
 //
 //	ctx = log.AddAttrsToContext(ctx,
 //	    slog.String("trace_id", id),

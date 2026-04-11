@@ -2,7 +2,7 @@
 Package log provides structured logging for ColdBrew microservices.
 
 It uses a custom slog.Handler that automatically injects per-request context
-fields (added via [AddToContext] or [loggers.AddToLogContext]) into every log record.
+fields (added via [AddToContext] or [AddAttrsToContext]) into every log record.
 
 # Quick Start
 
@@ -17,37 +17,45 @@ After calling [SetDefault], native slog calls automatically get ColdBrew
 context fields:
 
 	log.SetDefault(log.NewHandler())
-	ctx := log.AddToContext(ctx, "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = log.AddToContext(ctx, "trace_id", "abc-123")
 	slog.InfoContext(ctx, "request handled", "status", 200) // includes trace_id
 
-# Typed Attrs (Zero-Boxing Path)
+# Adding Context Fields
 
-Use [AddAttrsToContext] with [slog.LogAttrs] for the highest performance path,
-avoiding interface boxing for both context fields and per-call attributes:
+Use [AddAttrsToContext] to add typed slog.Attr fields, or [AddToContext] for
+untyped key-value pairs. Both are included in all subsequent logs for that
+request:
 
+	ctx := context.Background()
 	ctx = log.AddAttrsToContext(ctx,
 	    slog.String("trace_id", id),
 	    slog.Int("user_id", uid),
 	)
-	slog.LogAttrs(ctx, slog.LevelInfo, "request handled", slog.Int("status", 200))
+
+[AddAttrsToContext] stores each slog.Attr in the context. At log time, the
+Handler recovers the typed Attr and emits it directly. Context storage goes
+through an any-typed API internally (one boxing per field per request), but
+the Attr's type information is preserved for emission.
+
+# High-Performance Logging
+
+Combine [AddAttrsToContext] with [slog.LogAttrs] for the lowest-overhead path.
+Per-call attributes passed to [slog.LogAttrs] avoid interface boxing entirely:
+
+	slog.LogAttrs(ctx, slog.LevelInfo, "request handled",
+	    slog.Int("status", 200),
+	    slog.Duration("latency", elapsed),
+	)
 
 # Custom Handlers
 
 Use [NewHandlerWithInner] to compose ColdBrew's context injection with any
 slog.Handler:
 
-	// Fan-out to multiple destinations
 	multi := slogmulti.Fanout(jsonHandler, textHandler)
 	h := log.NewHandlerWithInner(multi)
 	log.SetDefault(h)
-
-# Contextual Logs
-
-Use [AddToContext] to add per-request fields that appear in all subsequent logs:
-
-	ctx = log.AddToContext(ctx, "request_id", "abc-123")
-	ctx = log.AddToContext(ctx, "user_id", "user-42")
-	log.Info(ctx, "msg", "processing request") // includes request_id and user_id
 
 ColdBrew interceptors automatically add grpcMethod, trace ID, and HTTP path
 to the context, so these fields appear in all service logs.

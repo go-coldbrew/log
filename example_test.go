@@ -30,14 +30,18 @@ func ExampleError() {
 }
 
 func ExampleAddAttrsToContext() {
+	// SetDefault wires ColdBrew's Handler into slog so context fields are injected.
+	// In production, core.New() calls this automatically.
+	log.SetDefault(log.NewHandler())
+
 	ctx := context.Background()
 
-	// Typed attrs avoid interface boxing for high-performance paths
+	// Typed attrs — the Handler recovers the slog.Attr at log time.
+	// Per-call attrs via slog.LogAttrs avoid interface boxing entirely.
 	ctx = log.AddAttrsToContext(ctx,
 		slog.String("trace_id", "abc-123"),
 		slog.Int("user_id", 42),
 	)
 
-	// Both context fields and per-call attrs use typed values
 	slog.LogAttrs(ctx, slog.LevelInfo, "request handled", slog.Int("status", 200))
 }

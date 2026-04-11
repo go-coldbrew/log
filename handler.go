@@ -61,7 +61,11 @@ func NewHandler(options ...loggers.Option) *Handler {
 		inner = slog.NewTextHandler(os.Stdout, handlerOpts)
 	}
 
-	return NewHandlerWithInner(inner, options...)
+	return &Handler{
+		inner:    inner,
+		levelVar: levelVar,
+		opts:     opt,
+	}
 }
 
 // NewHandlerWithInner creates a new Handler wrapping the provided slog.Handler.
@@ -176,8 +180,15 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 }
 
 // SetLevel changes the log level dynamically.
+// If the inner handler supports SetLevel (e.g., the BaseLogger adapter),
+// the level change is propagated.
 func (h *Handler) SetLevel(level loggers.Level) {
 	h.levelVar.Set(ToSlogLevel(level))
+
+	type levelSetter interface{ SetLevel(loggers.Level) }
+	if inner, ok := h.inner.(levelSetter); ok {
+		inner.SetLevel(level)
+	}
 }
 
 // GetLevel returns the current log level.
