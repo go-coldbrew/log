@@ -2,6 +2,7 @@ package log_test
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/go-coldbrew/log"
 )
@@ -26,4 +27,21 @@ func ExampleAddToContext() {
 func ExampleError() {
 	ctx := context.Background()
 	log.Error(ctx, "msg", "database connection failed", "host", "db.internal", "port", 5432, "retry_in", "5s")
+}
+
+func ExampleAddAttrsToContext() {
+	// SetDefault wires ColdBrew's Handler into slog so context fields are injected.
+	// In production, core.New() calls this automatically.
+	log.SetDefault(log.NewHandler())
+
+	ctx := context.Background()
+
+	// Typed attrs — the Handler recovers the slog.Attr at log time.
+	// Per-call attrs via slog.LogAttrs avoid interface boxing entirely.
+	ctx = log.AddAttrsToContext(ctx,
+		slog.String("trace_id", "abc-123"),
+		slog.Int("user_id", 42),
+	)
+
+	slog.LogAttrs(ctx, slog.LevelInfo, "request handled", slog.Int("status", 200))
 }

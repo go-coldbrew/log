@@ -6,63 +6,66 @@ import (
 	"strings"
 
 	"github.com/go-coldbrew/log"
-	"github.com/go-coldbrew/log/loggers"
 )
+
+// ToSlogHandler wraps a ColdBrew log.Logger as an slog.Handler.
+//
+// Deprecated: With the slog-native architecture, use log.GetHandler() directly
+// as it already implements slog.Handler with context field injection.
+// This function is kept for backward compatibility with custom Logger implementations.
+func ToSlogHandler(l log.Logger) slog.Handler {
+	return &slogHandler{l: l}
+}
+
+// ToSlogLogger wraps a ColdBrew log.Logger as an *slog.Logger.
+//
+// Deprecated: With the slog-native architecture, the global slog.Logger
+// is already configured via log.SetDefault. Use slog.Default() or
+// slog.New(log.GetHandler()) instead.
+func ToSlogLogger(l log.Logger) *slog.Logger {
+	return slog.New(ToSlogHandler(l))
+}
 
 // slogBridgeKey is a context sentinel used to prevent infinite loops
 // when both the slog handler bridge and slog backend are active.
 type slogBridgeKey struct{}
 
 // slogHandler implements slog.Handler, routing slog log calls into
-// a ColdBrew log.Logger. This allows third-party code and new code
-// using slog natively to flow through ColdBrew's logging pipeline.
+// a ColdBrew log.Logger. This is the legacy bridge for custom Logger
+// implementations that don't expose a Handler.
 type slogHandler struct {
-	l log.Logger
-	// preformatted holds key-value pairs from WithAttrs, already resolved
-	// with the groupPrefix that was active at the time WithAttrs was called.
-	// This ensures attrs are not retroactively re-prefixed by later WithGroup calls.
+	l            log.Logger
 	preformatted []any
 	groups       []string
-	groupPrefix  string // cached strings.Join(groups, ".") + "."
+	groupPrefix  string
 }
 
 // Enabled reports whether the handler handles records at the given level.
-// Respects per-request level overrides set via log.OverrideLogLevel.
-// ColdBrew levels are inverted (Error=0 < Warn=1 < Info=2 < Debug=3),
-// so >= means "configured level is at least as verbose as the message level."
 func (h *slogHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	cbLevel := h.l.GetLevel()
 	if override, found := log.GetOverridenLogLevel(ctx); found {
 		cbLevel = override
 	}
-	return cbLevel >= fromSlogLevel(level)
+	return cbLevel >= log.FromSlogLevel(level)
 }
 
-// The skip value accounts for the call stack between Handle and the actual caller:
-// baseLog.Log → wrapper.Log → Handle → slog.(*Logger).log → slog.Info → caller
 const slogHandlerSkip = 6
 
 func (h *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	// Re-entry guard: prevent infinite loops with the slog backend.
 	if ctx.Value(slogBridgeKey{}) != nil {
 		return nil
 	}
 	ctx = context.WithValue(ctx, slogBridgeKey{}, true)
 
-	cbLevel := fromSlogLevel(record.Level)
+	cbLevel := log.FromSlogLevel(record.Level)
 
-	// Use odd-leading form: message as first arg, then key-value pairs.
-	// This is the universal convention across all backends (zap, gokit, slog).
 	args := make([]any, 0, 1+len(h.preformatted)+record.NumAttrs()*2)
 	args = append(args, record.Message)
-
-	// Append pre-resolved attrs (keys already include their frozen group prefix).
 	args = append(args, h.preformatted...)
 
-	// Append record attrs with the current group prefix.
 	record.Attrs(func(a slog.Attr) bool {
 		args = appendAttr(args, h.groupPrefix, a, 0)
 		return true
@@ -76,8 +79,6 @@ func (h *slogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	if len(attrs) == 0 {
 		return h
 	}
-	// Pre-resolve attrs with the current groupPrefix so they're frozen
-	// and won't be affected by future WithGroup calls.
 	var resolved []any
 	for _, a := range attrs {
 		resolved = appendAttr(resolved, h.groupPrefix, a, 0)
@@ -103,40 +104,10 @@ func (h *slogHandler) WithGroup(name string) slog.Handler {
 	}
 }
 
-// ToSlogHandler wraps a ColdBrew log.Logger as an slog.Handler.
-func ToSlogHandler(l log.Logger) slog.Handler {
-	return &slogHandler{l: l}
-}
-
-// ToSlogLogger wraps a ColdBrew log.Logger as an *slog.Logger.
-func ToSlogLogger(l log.Logger) *slog.Logger {
-	return slog.New(ToSlogHandler(l))
-}
-
-func fromSlogLevel(level slog.Level) loggers.Level {
-	switch {
-	case level >= slog.LevelError:
-		return loggers.ErrorLevel
-	case level >= slog.LevelWarn:
-		return loggers.WarnLevel
-	case level >= slog.LevelInfo:
-		return loggers.InfoLevel
-	default:
-		return loggers.DebugLevel
-	}
-}
-
-// maxGroupDepth is the maximum nesting depth for slog group attributes.
-// Beyond this depth, groups are replaced with a placeholder to prevent
-// memory exhaustion from pathological input.
 const maxGroupDepth = 10
 
-// groupDepthExceededPlaceholder is the value used when slog group nesting
-// exceeds maxGroupDepth.
 const groupDepthExceededPlaceholder = "[nested group depth exceeded]"
 
-// appendAttr flattens an slog.Attr into key-value pairs, applying a group prefix.
-// depth tracks the current group nesting level to cap unbounded recursion.
 func appendAttr(args []any, groupPrefix string, a slog.Attr, depth int) []any {
 	a.Value = a.Value.Resolve()
 	if a.Equal(slog.Attr{}) {

@@ -1,36 +1,63 @@
 /*
-Package log provides a minimal interface for structured logging in services. ColdBrew uses this log package for all logs.
-It provides a simple interface to log errors, warnings, info and debug messages.
-It also provides a mechanism to add contextual information to logs.
-available implementations of BaseLogger are in loggers package. You can also implement your own BaseLogger to use with this package.
+Package log provides structured logging for ColdBrew microservices.
 
-# How To Use
+It uses a custom slog.Handler that automatically injects per-request context
+fields (added via [AddToContext] or [AddAttrsToContext]) into every log record.
 
-The simplest way to use this package is by calling static log functions to report particular level (error/warning/info/debug)
+# Quick Start
 
-	log.Error(...)
-	log.Warn(...)
-	log.Info(...)
-	log.Debug(...)
+Use the package-level functions for simple logging:
 
-You can also initialize a new logger by calling 'log.NewLogger' and passing a loggers.BaseLogger implementation (loggers package provides a number of pre built implementations)
+	log.Info(ctx, "msg", "order processed", "order_id", "ORD-123")
+	log.Error(ctx, "msg", "connection failed", "host", "db.internal")
 
-	logger := log.NewLogger(gokit.NewLogger())
-	logger.Info(ctx, "key", "value")
+# Native slog Support
 
-Note:
+After calling [SetDefault], native slog calls automatically get ColdBrew
+context fields:
 
-	Preferred logging output is in either logfmt or json format, so to facilitate these log function arguments should be in pairs of key-value
+	log.SetDefault(log.NewHandler())
+	ctx := context.Background()
+	ctx = log.AddToContext(ctx, "trace_id", "abc-123")
+	slog.InfoContext(ctx, "request handled", "status", 200) // includes trace_id
 
-# Contextual Logs
+# Adding Context Fields
 
-log package uses context.Context to pass additional information to logs, you can use 'loggers.AddToLogContext' function to add additional information to logs. For example in access log from service
+Use [AddAttrsToContext] to add typed slog.Attr fields, or [AddToContext] for
+untyped key-value pairs. Both are included in all subsequent logs for that
+request:
 
-	{"@timestamp":"2018-07-30T09:58:18.262948679Z","caller":"http/http.go:66","error":null,"grpcMethod":"/AuthSvc.AuthService/Authenticate","level":"info","method":"POST","path":"/2.0/authenticate/","took":"1.356812ms","trace":"15592e1b-93df-11e8-bdfd-0242ac110002","transport":"http"}
+	ctx := context.Background()
+	ctx = log.AddAttrsToContext(ctx,
+	    slog.String("trace_id", id),
+	    slog.Int("user_id", uid),
+	)
 
-we pass 'grpcMethod' from context, this information gets automatically added to all log calls called inside the service and makes debugging services much easier.
-ColdBrew also generates a 'trace' ID per request, this can be used to trace an entire request path in logs.
+[AddAttrsToContext] stores each slog.Attr in the context. At log time, the
+Handler recovers the typed Attr and emits it directly. Context storage goes
+through an any-typed API internally (one boxing per field per request), but
+the Attr's type information is preserved for emission.
 
-this package is based on https://github.com/carousell/Orion/tree/master/utils/log
+# High-Performance Logging
+
+Combine [AddAttrsToContext] with [slog.LogAttrs] for the lowest-overhead path.
+Per-call attributes passed to [slog.LogAttrs] avoid interface boxing entirely:
+
+	slog.LogAttrs(ctx, slog.LevelInfo, "request handled",
+	    slog.Int("status", 200),
+	    slog.Duration("latency", elapsed),
+	)
+
+# Custom Handlers
+
+Use [NewHandlerWithInner] to compose ColdBrew's context injection with any
+slog.Handler:
+
+	multi := slogmulti.Fanout(jsonHandler, textHandler)
+	h := log.NewHandlerWithInner(multi)
+	log.SetDefault(h)
+
+ColdBrew interceptors automatically add grpcMethod, trace ID, and HTTP path
+to the context, so these fields appear in all service logs.
 */
 package log
