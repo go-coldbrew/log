@@ -13,60 +13,99 @@
 import "github.com/go-coldbrew/log"
 ```
 
-Package log provides a minimal interface for structured logging in services. ColdBrew uses this log package for all logs. It provides a simple interface to log errors, warnings, info and debug messages. It also provides a mechanism to add contextual information to logs. available implementations of BaseLogger are in loggers package. You can also implement your own BaseLogger to use with this package.
+Package log provides structured logging for ColdBrew microservices.
 
-### How To Use
+It uses a custom slog.Handler that automatically injects per\-request context fields \(added via [AddToContext](<#AddToContext>) or [AddAttrsToContext](<#AddAttrsToContext>)\) into every log record.
 
-The simplest way to use this package is by calling static log functions to report particular level \(error/warning/info/debug\)
+### Quick Start
 
-```
-log.Error(...)
-log.Warn(...)
-log.Info(...)
-log.Debug(...)
-```
-
-You can also initialize a new logger by calling 'log.NewLogger' and passing a loggers.BaseLogger implementation \(loggers package provides a number of pre built implementations\)
+Use the package\-level functions for simple logging:
 
 ```
-logger := log.NewLogger(gokit.NewLogger())
-logger.Info(ctx, "key", "value")
+log.Info(ctx, "msg", "order processed", "order_id", "ORD-123")
+log.Error(ctx, "msg", "connection failed", "host", "db.internal")
 ```
 
-Note:
+### Native slog Support
+
+After calling [SetDefault](<#SetDefault>), native slog calls automatically get ColdBrew context fields:
 
 ```
-Preferred logging output is in either logfmt or json format, so to facilitate these log function arguments should be in pairs of key-value
+log.SetDefault(log.NewHandler())
+ctx := context.Background()
+ctx = log.AddToContext(ctx, "trace_id", "abc-123")
+slog.InfoContext(ctx, "request handled", "status", 200) // includes trace_id
 ```
 
-### Contextual Logs
+### Adding Context Fields
 
-log package uses context.Context to pass additional information to logs, you can use 'loggers.AddToLogContext' function to add additional information to logs. For example in access log from service
+Use [AddAttrsToContext](<#AddAttrsToContext>) to add typed slog.Attr fields, or [AddToContext](<#AddToContext>) for untyped key\-value pairs. Both are included in all subsequent logs for that request:
 
 ```
-{"@timestamp":"2018-07-30T09:58:18.262948679Z","caller":"http/http.go:66","error":null,"grpcMethod":"/AuthSvc.AuthService/Authenticate","level":"info","method":"POST","path":"/2.0/authenticate/","took":"1.356812ms","trace":"15592e1b-93df-11e8-bdfd-0242ac110002","transport":"http"}
+ctx := context.Background()
+ctx = log.AddAttrsToContext(ctx,
+    slog.String("trace_id", id),
+    slog.Int("user_id", uid),
+)
 ```
 
-we pass 'grpcMethod' from context, this information gets automatically added to all log calls called inside the service and makes debugging services much easier. ColdBrew also generates a 'trace' ID per request, this can be used to trace an entire request path in logs.
+[AddAttrsToContext](<#AddAttrsToContext>) stores each slog.Attr in the context. At log time, the Handler recovers the typed Attr and emits it directly. Context storage goes through an any\-typed API internally \(one boxing per field per request\), but the Attr's type information is preserved for emission.
 
-this package is based on https://github.com/carousell/Orion/tree/master/utils/log
+### High\\\-Performance Logging
+
+Combine [AddAttrsToContext](<#AddAttrsToContext>) with \[slog.LogAttrs\] for the lowest\-overhead path. Per\-call attributes passed to \[slog.LogAttrs\] avoid interface boxing entirely:
+
+```
+slog.LogAttrs(ctx, slog.LevelInfo, "request handled",
+    slog.Int("status", 200),
+    slog.Duration("latency", elapsed),
+)
+```
+
+### Custom Handlers
+
+Use [NewHandlerWithInner](<#NewHandlerWithInner>) to compose ColdBrew's context injection with any slog.Handler:
+
+```
+multi := slogmulti.Fanout(jsonHandler, textHandler)
+h := log.NewHandlerWithInner(multi)
+log.SetDefault(h)
+```
+
+ColdBrew interceptors automatically add grpcMethod, trace ID, and HTTP path to the context, so these fields appear in all service logs.
 
 ## Index
 
 - [Constants](<#constants>)
+- [func AddAttrsToContext\(ctx context.Context, attrs ...slog.Attr\) context.Context](<#AddAttrsToContext>)
 - [func AddToContext\(ctx context.Context, key string, value any\) context.Context](<#AddToContext>)
 - [func Debug\(ctx context.Context, args ...any\)](<#Debug>)
+- [func DefaultIsSet\(\) bool](<#DefaultIsSet>)
 - [func Error\(ctx context.Context, args ...any\)](<#Error>)
+- [func FromSlogLevel\(level slog.Level\) loggers.Level](<#FromSlogLevel>)
 - [func GetLevel\(\) loggers.Level](<#GetLevel>)
 - [func GetOverridenLogLevel\(ctx context.Context\) \(loggers.Level, bool\)](<#GetOverridenLogLevel>)
 - [func Info\(ctx context.Context, args ...any\)](<#Info>)
 - [func OverrideLogLevel\(ctx context.Context, level loggers.Level\) context.Context](<#OverrideLogLevel>)
+- [func SetDefault\(h \*Handler\)](<#SetDefault>)
 - [func SetLevel\(level loggers.Level\)](<#SetLevel>)
 - [func SetLogger\(l Logger\)](<#SetLogger>)
+- [func ToSlogLevel\(level loggers.Level\) slog.Level](<#ToSlogLevel>)
 - [func Warn\(ctx context.Context, args ...any\)](<#Warn>)
+- [type Handler](<#Handler>)
+  - [func GetHandler\(\) \*Handler](<#GetHandler>)
+  - [func NewHandler\(options ...loggers.Option\) \*Handler](<#NewHandler>)
+  - [func NewHandlerWithInner\(inner slog.Handler, options ...loggers.Option\) \*Handler](<#NewHandlerWithInner>)
+  - [func \(h \*Handler\) Enabled\(ctx context.Context, level slog.Level\) bool](<#Handler.Enabled>)
+  - [func \(h \*Handler\) GetLevel\(\) loggers.Level](<#Handler.GetLevel>)
+  - [func \(h \*Handler\) Handle\(ctx context.Context, record slog.Record\) error](<#Handler.Handle>)
+  - [func \(h \*Handler\) Inner\(\) slog.Handler](<#Handler.Inner>)
+  - [func \(h \*Handler\) SetLevel\(level loggers.Level\)](<#Handler.SetLevel>)
+  - [func \(h \*Handler\) WithAttrs\(attrs \[\]slog.Attr\) slog.Handler](<#Handler.WithAttrs>)
+  - [func \(h \*Handler\) WithGroup\(name string\) slog.Handler](<#Handler.WithGroup>)
 - [type Logger](<#Logger>)
   - [func GetLogger\(\) Logger](<#GetLogger>)
-  - [func NewLogger\(log loggers.BaseLogger\) Logger](<#NewLogger>)
+  - [func NewLogger\(bl loggers.BaseLogger\) Logger](<#NewLogger>)
 
 
 ## Constants
@@ -77,14 +116,69 @@ this package is based on https://github.com/carousell/Orion/tree/master/utils/lo
 const SupportPackageIsVersion1 = true
 ```
 
+<a name="AddAttrsToContext"></a>
+## func [AddAttrsToContext](<https://github.com/go-coldbrew/log/blob/main/log.go#L203>)
+
+```go
+func AddAttrsToContext(ctx context.Context, attrs ...slog.Attr) context.Context
+```
+
+AddAttrsToContext adds typed slog.Attr fields to the context. Each Attr is stored keyed by its own Key. At log time, the Handler recovers the typed Attr via a type switch, preserving the original slog type information.
+
+Note: context storage goes through an any\-typed API internally, so the Attr is boxed once when stored. The benefit is at log emission time — the Handler emits the Attr directly instead of wrapping it in slog.Any. Combine with slog.LogAttrs for per\-call attrs to avoid boxing on the hot path:
+
+```
+ctx = log.AddAttrsToContext(ctx,
+    slog.String("trace_id", id),
+    slog.Int("user_id", uid),
+)
+slog.LogAttrs(ctx, slog.LevelInfo, "handled", slog.Int("status", 200))
+```
+
+<details><summary>Example</summary>
+<p>
+
+
+
+```go
+package main
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/go-coldbrew/log"
+)
+
+func main() {
+	// SetDefault wires ColdBrew's Handler into slog so context fields are injected.
+	// In production, core.New() calls this automatically.
+	log.SetDefault(log.NewHandler())
+
+	ctx := context.Background()
+
+	// Typed attrs — the Handler recovers the slog.Attr at log time.
+	// Per-call attrs via slog.LogAttrs avoid interface boxing entirely.
+	ctx = log.AddAttrsToContext(ctx,
+		slog.String("trace_id", "abc-123"),
+		slog.Int("user_id", 42),
+	)
+
+	slog.LogAttrs(ctx, slog.LevelInfo, "request handled", slog.Int("status", 200))
+}
+```
+
+</p>
+</details>
+
 <a name="AddToContext"></a>
-## func [AddToContext](<https://github.com/go-coldbrew/log/blob/main/log.go#L93>)
+## func [AddToContext](<https://github.com/go-coldbrew/log/blob/main/log.go#L182>)
 
 ```go
 func AddToContext(ctx context.Context, key string, value any) context.Context
 ```
 
-AddToContext adds log fields to the provided context. Any info added here will be included in all logs that use the returned context. This is the preferred entry point for adding contextual logging fields and is implemented internally using loggers.AddToLogContext.
+AddToContext adds log fields to the provided context. Any info added here will be included in all logs that use the returned context. This works with both ColdBrew's log functions and native slog.InfoContext.
 
 <details><summary>Example</summary>
 <p>
@@ -125,6 +219,15 @@ func Debug(ctx context.Context, args ...any)
 
 Debug writes out a debug log to global logger This is a convenience function for GetLogger\(\).Log\(ctx, loggers.DebugLevel, 1, args...\)
 
+<a name="DefaultIsSet"></a>
+## func [DefaultIsSet](<https://github.com/go-coldbrew/log/blob/main/log.go#L136>)
+
+```go
+func DefaultIsSet() bool
+```
+
+DefaultIsSet reports whether SetDefault has been called explicitly. Used by core to avoid overwriting a user\-configured handler.
+
 <a name="Error"></a>
 ## func [Error](<https://github.com/go-coldbrew/log/blob/main/utils.go#L40>)
 
@@ -156,6 +259,15 @@ func main() {
 
 </p>
 </details>
+
+<a name="FromSlogLevel"></a>
+## func [FromSlogLevel](<https://github.com/go-coldbrew/log/blob/main/handler.go#L269>)
+
+```go
+func FromSlogLevel(level slog.Level) loggers.Level
+```
+
+FromSlogLevel converts an slog.Level to a ColdBrew log level.
 
 <a name="GetLevel"></a>
 ## func [GetLevel](<https://github.com/go-coldbrew/log/blob/main/utils.go#L16>)
@@ -216,6 +328,15 @@ func OverrideLogLevel(ctx context.Context, level loggers.Level) context.Context
 
 OverrideLogLevel allows the default log level to be overridden from request context This is useful when you want to override the log level for a specific request For example, you can set the log level to debug for a specific request while the default log level is set to info
 
+<a name="SetDefault"></a>
+## func [SetDefault](<https://github.com/go-coldbrew/log/blob/main/log.go#L125>)
+
+```go
+func SetDefault(h *Handler)
+```
+
+SetDefault sets the global ColdBrew handler and also calls slog.SetDefault so that native slog.InfoContext/slog.ErrorContext calls automatically get ColdBrew context fields injected.
+
 <a name="SetLevel"></a>
 ## func [SetLevel](<https://github.com/go-coldbrew/log/blob/main/utils.go#L10>)
 
@@ -226,13 +347,24 @@ func SetLevel(level loggers.Level)
 SetLevel sets the log level to filter logs
 
 <a name="SetLogger"></a>
-## func [SetLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L83>)
+## func [SetLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L155>)
 
 ```go
 func SetLogger(l Logger)
 ```
 
-SetLogger sets the global logger
+SetLogger sets the global logger.
+
+Deprecated: Use SetDefault with a \*Handler instead. SetLogger is kept for backward compatibility with code that implements the Logger interface.
+
+<a name="ToSlogLevel"></a>
+## func [ToSlogLevel](<https://github.com/go-coldbrew/log/blob/main/handler.go#L253>)
+
+```go
+func ToSlogLevel(level loggers.Level) slog.Level
+```
+
+ToSlogLevel converts a ColdBrew log level to an slog.Level.
 
 <a name="Warn"></a>
 ## func [Warn](<https://github.com/go-coldbrew/log/blob/main/utils.go#L34>)
@@ -243,45 +375,158 @@ func Warn(ctx context.Context, args ...any)
 
 Warn writes out a warning log to global logger This is a convenience function for GetLogger\(\).Log\(ctx, loggers.WarnLevel, 1, args...\)
 
-<a name="Logger"></a>
-## type [Logger](<https://github.com/go-coldbrew/log/blob/main/types.go#L10-L24>)
+<a name="Handler"></a>
+## type [Handler](<https://github.com/go-coldbrew/log/blob/main/handler.go#L23-L28>)
 
-Logger interface is implemnted by the log implementation to provide the log methods to the application code.
+Handler implements slog.Handler with automatic ColdBrew context field injection. Any fields added via loggers.AddToLogContext \(or log.AddToContext\) are automatically included in every log record processed by this handler.
+
+Handler is composable — it can wrap any slog.Handler as its inner handler, and it can itself be wrapped by other slog.Handler implementations \(e.g., slog\-multi\). WithAttrs and WithGroup return new \*Handler instances that preserve context injection.
+
+```go
+type Handler struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="GetHandler"></a>
+### func [GetHandler](<https://github.com/go-coldbrew/log/blob/main/log.go#L141>)
+
+```go
+func GetHandler() *Handler
+```
+
+GetHandler returns the global ColdBrew Handler.
+
+<a name="NewHandler"></a>
+### func [NewHandler](<https://github.com/go-coldbrew/log/blob/main/handler.go#L34>)
+
+```go
+func NewHandler(options ...loggers.Option) *Handler
+```
+
+NewHandler creates a new Handler with the default inner handler \(slog.JSONHandler or slog.TextHandler based on options\).
+
+<a name="NewHandlerWithInner"></a>
+### func [NewHandlerWithInner](<https://github.com/go-coldbrew/log/blob/main/handler.go#L80>)
+
+```go
+func NewHandlerWithInner(inner slog.Handler, options ...loggers.Option) *Handler
+```
+
+NewHandlerWithInner creates a new Handler wrapping the provided slog.Handler. Use this to compose ColdBrew's context injection with custom handlers \(e.g., slog\-multi for fan\-out, sampling handlers, or custom formatters\).
+
+Example:
+
+```
+multi := slogmulti.Fanout(jsonHandler, textHandler)
+h := log.NewHandlerWithInner(multi)
+log.SetDefault(h)
+```
+
+<a name="Handler.Enabled"></a>
+### func \(\*Handler\) [Enabled](<https://github.com/go-coldbrew/log/blob/main/handler.go#L113>)
+
+```go
+func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool
+```
+
+Enabled reports whether the handler handles records at the given level. It checks both the configured level and any per\-request level override set via OverrideLogLevel. This means per\-request debug logging works even for native slog.DebugContext calls.
+
+<a name="Handler.GetLevel"></a>
+### func \(\*Handler\) [GetLevel](<https://github.com/go-coldbrew/log/blob/main/handler.go#L198>)
+
+```go
+func (h *Handler) GetLevel() loggers.Level
+```
+
+GetLevel returns the current log level.
+
+<a name="Handler.Handle"></a>
+### func \(\*Handler\) [Handle](<https://github.com/go-coldbrew/log/blob/main/handler.go#L135>)
+
+```go
+func (h *Handler) Handle(ctx context.Context, record slog.Record) error
+```
+
+Handle processes the log record, injecting ColdBrew context fields and caller info, then delegates to the inner handler.
+
+<a name="Handler.Inner"></a>
+### func \(\*Handler\) [Inner](<https://github.com/go-coldbrew/log/blob/main/handler.go#L105>)
+
+```go
+func (h *Handler) Inner() slog.Handler
+```
+
+Inner returns the wrapped slog.Handler.
+
+<a name="Handler.SetLevel"></a>
+### func \(\*Handler\) [SetLevel](<https://github.com/go-coldbrew/log/blob/main/handler.go#L188>)
+
+```go
+func (h *Handler) SetLevel(level loggers.Level)
+```
+
+SetLevel changes the log level dynamically. If the inner handler supports SetLevel \(e.g., the BaseLogger adapter\), the level change is propagated.
+
+<a name="Handler.WithAttrs"></a>
+### func \(\*Handler\) [WithAttrs](<https://github.com/go-coldbrew/log/blob/main/handler.go#L169>)
+
+```go
+func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler
+```
+
+WithAttrs returns a new Handler with the given attributes pre\-applied. The returned handler preserves ColdBrew context field injection.
+
+<a name="Handler.WithGroup"></a>
+### func \(\*Handler\) [WithGroup](<https://github.com/go-coldbrew/log/blob/main/handler.go#L178>)
+
+```go
+func (h *Handler) WithGroup(name string) slog.Handler
+```
+
+WithGroup returns a new Handler with the given group name. The returned handler preserves ColdBrew context field injection.
+
+<a name="Logger"></a>
+## type [Logger](<https://github.com/go-coldbrew/log/blob/main/types.go#L11-L25>)
+
+Logger is the interface for ColdBrew's structured logging. It extends loggers.BaseLogger with convenience methods for each log level.
 
 ```go
 type Logger interface {
-    loggers.BaseLogger
+    loggers.BaseLogger //nolint:staticcheck // intentional use for backward compatibility
     // Debug logs a message at level Debug.
-    // ctx is used to extract the request id and other context information.
+    // ctx is used to extract per-request context fields.
     Debug(ctx context.Context, args ...any)
     // Info logs a message at level Info.
-    // ctx is used to extract the request id and other context information.
+    // ctx is used to extract per-request context fields.
     Info(ctx context.Context, args ...any)
     // Warn logs a message at level Warn.
-    // ctx is used to extract the request id and other context information.
+    // ctx is used to extract per-request context fields.
     Warn(ctx context.Context, args ...any)
     // Error logs a message at level Error.
-    // ctx is used to extract the request id and other context information.
+    // ctx is used to extract per-request context fields.
     Error(ctx context.Context, args ...any)
 }
 ```
 
 <a name="GetLogger"></a>
-### func [GetLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L71>)
+### func [GetLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L147>)
 
 ```go
 func GetLogger() Logger
 ```
 
-GetLogger returns the global logger If the global logger is not set, it will create a new one with slog logger
+GetLogger returns the global logger. If the global logger is not set, it will create a new one with the default Handler.
 
 <a name="NewLogger"></a>
-### func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L63>)
+### func [NewLogger](<https://github.com/go-coldbrew/log/blob/main/log.go#L174>)
 
 ```go
-func NewLogger(log loggers.BaseLogger) Logger
+func NewLogger(bl loggers.BaseLogger) Logger
 ```
 
-NewLogger creates a new logger with a provided BaseLogger The default logger is slog logger
+NewLogger creates a new logger with a provided BaseLogger.
+
+Deprecated: Use NewHandler or NewHandlerWithInner instead. NewLogger is kept for backward compatibility.
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

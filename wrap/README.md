@@ -13,26 +13,14 @@
 import "github.com/go-coldbrew/log/wrap"
 ```
 
-Package wrap provides multiple wrap functions to wrap log implementation of other log packages
-
 ## Index
 
-- [func ToGoKitLogger\(l log.Logger\) basegokit.Logger](<#ToGoKitLogger>)
 - [func ToSlogHandler\(l log.Logger\) slog.Handler](<#ToSlogHandler>)
 - [func ToSlogLogger\(l log.Logger\) \*slog.Logger](<#ToSlogLogger>)
 
 
-<a name="ToGoKitLogger"></a>
-## func [ToGoKitLogger](<https://github.com/go-coldbrew/log/blob/main/wrap/gokitwrap.go#L35>)
-
-```go
-func ToGoKitLogger(l log.Logger) basegokit.Logger
-```
-
-ToGoKitLogger wraps a log.Logger to gokit/log.Logger
-
 <a name="ToSlogHandler"></a>
-## func [ToSlogHandler](<https://github.com/go-coldbrew/log/blob/main/wrap/slogwrap.go#L107>)
+## func [ToSlogHandler](<https://github.com/go-coldbrew/log/blob/main/wrap/slogwrap.go#L16>)
 
 ```go
 func ToSlogHandler(l log.Logger) slog.Handler
@@ -40,14 +28,18 @@ func ToSlogHandler(l log.Logger) slog.Handler
 
 ToSlogHandler wraps a ColdBrew log.Logger as an slog.Handler.
 
+Deprecated: With the slog\-native architecture, use log.GetHandler\(\) directly as it already implements slog.Handler with context field injection. This function is kept for backward compatibility with custom Logger implementations.
+
 <a name="ToSlogLogger"></a>
-## func [ToSlogLogger](<https://github.com/go-coldbrew/log/blob/main/wrap/slogwrap.go#L112>)
+## func [ToSlogLogger](<https://github.com/go-coldbrew/log/blob/main/wrap/slogwrap.go#L25>)
 
 ```go
 func ToSlogLogger(l log.Logger) *slog.Logger
 ```
 
 ToSlogLogger wraps a ColdBrew log.Logger as an \*slog.Logger.
+
+Deprecated: With the slog\-native architecture, the global slog.Logger is already configured via log.SetDefault. Use slog.Default\(\) or slog.New\(log.GetHandler\(\)\) instead.
 
 <details><summary>Example</summary>
 <p>

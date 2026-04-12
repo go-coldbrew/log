@@ -343,6 +343,33 @@ func TestAddAttrsToContext_Nil(t *testing.T) {
 	}
 }
 
+func TestDefaultIsSet(t *testing.T) {
+	prevHandler := defaultHandler.Load()
+	prevFlag := defaultExplicitlySet.Load()
+	t.Cleanup(func() {
+		defaultHandler.Store(prevHandler)
+		defaultExplicitlySet.Store(prevFlag)
+	})
+
+	// Reset state.
+	defaultHandler.Store(nil)
+	defaultExplicitlySet.Store(false)
+
+	// Lazy init via GetHandler does NOT set the flag.
+	_ = GetHandler()
+	if DefaultIsSet() {
+		t.Error("expected DefaultIsSet=false after lazy init")
+	}
+
+	// Explicit SetDefault sets the flag.
+	defaultHandler.Store(nil)
+	defaultExplicitlySet.Store(false)
+	SetDefault(NewHandler())
+	if !DefaultIsSet() {
+		t.Error("expected DefaultIsSet=true after SetDefault")
+	}
+}
+
 func TestLevelMapping(t *testing.T) {
 	tests := []struct {
 		cb   loggers.Level

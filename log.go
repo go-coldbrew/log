@@ -14,7 +14,10 @@ import (
 // Downstream packages reference this to enforce version compatibility.
 const SupportPackageIsVersion1 = true
 
-var defaultHandler atomic.Pointer[Handler]
+var (
+	defaultHandler       atomic.Pointer[Handler]
+	defaultExplicitlySet atomic.Bool
+)
 
 // cbLogger wraps a Handler and provides ColdBrew's convenience methods.
 type cbLogger struct {
@@ -124,7 +127,14 @@ func SetDefault(h *Handler) {
 		return
 	}
 	defaultHandler.Store(h)
+	defaultExplicitlySet.Store(true)
 	slog.SetDefault(slog.New(h))
+}
+
+// DefaultIsSet reports whether SetDefault has been called explicitly.
+// Used by core to avoid overwriting a user-configured handler.
+func DefaultIsSet() bool {
+	return defaultExplicitlySet.Load()
 }
 
 // GetHandler returns the global ColdBrew Handler.
